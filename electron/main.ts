@@ -66,6 +66,7 @@ async function startServer(): Promise<number> {
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
       FORGE_DATA_DIR: path.join(os.homedir(), '.forge'),
+      FORGE_RESOURCES_PATH: resourcesPath,
       HOME: os.homedir(),
     },
     cwd,

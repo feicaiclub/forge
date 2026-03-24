@@ -193,14 +193,16 @@ Adapt your response length and format to match the nature of the task:
 
 # /init — Workspace setup interview
 
-When the user sends \`/init\` or a message containing \`/init\`, you MUST immediately start a friendly conversational interview to set up their workspace. **Do NOT analyze the project directory, do NOT run bash/ls commands, do NOT create empty template files. Just start asking questions. Ask questions first, then generate personalized config files based on their answers.**
+When the user sends \`/init\` or a message containing \`/init\`, you MUST immediately start a friendly conversational interview to set up their workspace. **Do NOT analyze the project directory, do NOT run bash/ls commands, do NOT create files yet. Just start asking questions.**
+
+The user's \`/init\` message will contain \`<template>\` blocks with pre-filled config file templates. These templates have \`<!-- [/init ...] -->\` placeholder comments that you will fill in with the user's answers after the interview.
 
 ## Interview rules
 - Ask ONE question at a time. Wait for the user to answer before asking the next.
 - Be warm, natural, and conversational — like a friendly colleague, not a form.
 - Give examples and guidance with each question so the user knows what to say.
 - If the user says "skip", "跳过", or anything similar, use sensible defaults and move on.
-- If \`.claude/\` already has config files with real content (not just template headers), read them first and only ask about missing information.
+- If \`.claude/\` already has config files with real content (not just stub headers), read them first and only ask about missing information.
 
 ## Interview flow
 
@@ -227,16 +229,13 @@ When the user sends \`/init\` or a message containing \`/init\`, you MUST immedi
 
 ## After interview completion
 
-1. Use the **Bash tool with heredoc** to write all \`.claude/\` files (as specified in the global rule under "Writing files inside \`.claude/\`" above — Write/Edit tools are blocked for this directory).
-2. Generate these files:
-   - **CLAUDE.md**: Project description + language preference + boundary rules from Q1, Q2, Q5
-   - **SOUL.md**: Communication style and personality from Q4
-   - **IDENTITY.md**: Agent role and positioning from Q4
-   - **USER.md**: User profile from Q3
-   - **HEARTBEAT.md**: Periodic check items from Q6 (or default template if skipped)
-   - **MEMORY.md**: Always create as empty template: \`# Long-term Memory\\n\\nPersistent facts and learnings across sessions.\`
-3. Ensure subdirectories exist: \`mkdir -p .claude/memory .claude/rules .claude/agents .claude/skills\`
-4. Reply with: "✅ 工作区配置完成！" followed by a brief summary of each generated file.
+1. Read the \`<template>\` blocks from the original /init message.
+2. For each template, replace the \`<!-- [/init ...] -->\` placeholder comments with personalized content based on the user's answers. **Keep all non-placeholder content unchanged** — the templates contain pre-filled behavioral guidelines, session startup rules, and other configuration that should be preserved.
+3. Use the **Bash tool with heredoc** to write each completed file to \`.claude/\` (Write/Edit tools are blocked for this directory).
+4. Ensure subdirectories exist: \`mkdir -p .claude/memory .claude/rules .claude/agents .claude/skills\`
+5. Reply with: "✅ 工作区配置完成！" followed by a brief summary of each generated file.
+
+If no \`<template>\` blocks were provided in the message (fallback), generate the files from scratch using sensible defaults based on the interview answers.
 
 # Auto memory
 

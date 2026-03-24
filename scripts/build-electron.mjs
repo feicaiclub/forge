@@ -71,6 +71,19 @@ function resolveSymlinks(dir) {
   console.log(`✅ Resolved ${resolved} symlinks in standalone`)
 }
 
+// Step 3: Copy templates/ to .next/standalone/ for production server access
+function copyTemplates(standaloneDir) {
+  const src = join(process.cwd(), 'templates')
+  const dest = join(standaloneDir, 'templates')
+  try {
+    lstatSync(src)
+    cpSync(src, dest, { recursive: true })
+    console.log('✅ Copied templates/ to standalone')
+  } catch {
+    console.log('⚠️  No templates/ directory found — skipping')
+  }
+}
+
 // Main
 await buildElectron()
 
@@ -78,6 +91,7 @@ const standaloneDir = join(process.cwd(), '.next', 'standalone')
 try {
   lstatSync(standaloneDir)
   resolveSymlinks(standaloneDir)
+  copyTemplates(standaloneDir)
 } catch {
   console.log('⚠️  No .next/standalone found — skipping symlink resolution (dev build?)')
 }

@@ -246,10 +246,22 @@ export function ChatView({
             break
           case 'init':
             if (workspaceId) {
-              // Ensure .claude/ directory exists before Agent starts interview
-              try { await fetch(`/api/workspaces/${workspaceId}/init`, { method: 'POST' }) } catch { /* ignore */ }
-              // Send explicit interview trigger — must be unambiguous so Agent follows the interview protocol
-              onSendMessage('/init — Please start the workspace setup interview. Ask me questions one at a time to personalize my .claude/ config files.')
+              // Ensure .claude/ directory exists + fetch init templates
+              let templateBlock = ''
+              try {
+                const res = await fetch(`/api/workspaces/${workspaceId}/init`, { method: 'POST' })
+                const data = await res.json()
+                if (data.templates && typeof data.templates === 'object') {
+                  templateBlock = Object.entries(data.templates)
+                    .map(([name, content]) => `<template file="${name}">\n${content}\n</template>`)
+                    .join('\n\n')
+                }
+              } catch { /* proceed without templates as fallback */ }
+              // Send interview trigger with templates attached
+              const initMessage = templateBlock
+                ? `/init — Please start the workspace setup interview. Ask me questions one at a time.\n\nAfter the interview, use these templates to generate the .claude/ config files. Replace <!-- [/init ...] --> placeholders with personalized content based on my answers. Keep all non-placeholder content unchanged.\n\n${templateBlock}`
+                : '/init — Please start the workspace setup interview. Ask me questions one at a time to personalize my .claude/ config files.'
+              onSendMessage(initMessage)
             } else {
               setSystemMsg('No workspace selected.')
             }

@@ -41,6 +41,11 @@
       "from": "public/",
       "to": "standalone/public/",
       "filter": ["**/*"]
+    },
+    {
+      "from": "templates/",
+      "to": "templates/",
+      "filter": ["**/*"]
     }
   ],
   "npmRebuild": false,
