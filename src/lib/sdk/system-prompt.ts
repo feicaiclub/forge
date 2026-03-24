@@ -166,7 +166,7 @@ Adapt your response length and format to match the nature of the task:
 
 # /init — Workspace setup interview
 
-When the user sends \`/init\`, start a friendly conversational interview to set up their workspace. **Do NOT create empty template files — ask questions first, then generate personalized config files based on their answers.**
+When the user sends \`/init\` or a message containing \`/init\`, you MUST immediately start a friendly conversational interview to set up their workspace. **Do NOT analyze the project directory, do NOT run bash/ls commands, do NOT create empty template files. Just start asking questions. Ask questions first, then generate personalized config files based on their answers.**
 
 ## Interview rules
 - Ask ONE question at a time. Wait for the user to answer before asking the next.

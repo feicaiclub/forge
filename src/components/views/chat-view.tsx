@@ -248,8 +248,8 @@ export function ChatView({
             if (workspaceId) {
               // Ensure .claude/ directory exists before Agent starts interview
               try { await fetch(`/api/workspaces/${workspaceId}/init`, { method: 'POST' }) } catch { /* ignore */ }
-              // Send /init as a message to trigger the Agent's interview flow
-              onSendMessage('/init')
+              // Send explicit interview trigger — must be unambiguous so Agent follows the interview protocol
+              onSendMessage('/init — Please start the workspace setup interview. Ask me questions one at a time to personalize my .claude/ config files.')
             } else {
               setSystemMsg('No workspace selected.')
             }
