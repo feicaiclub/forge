@@ -7,7 +7,7 @@ import { getUploadsDir } from '@/lib/forge-data'
 import { MessageMapper } from '@/lib/sdk/message-mapper'
 import type { SseEvent } from '@/lib/sdk/message-mapper'
 import { createPermissionBridge, cleanupStaleSessionAllowances } from '@/lib/sdk/permission-bridge'
-import { appendDailyMemory, archiveOldMemories } from '@/lib/workspace-fs'
+import { archiveOldMemories } from '@/lib/workspace-fs'
 import { resolveProvider } from '@/lib/provider'
 import { runSessionCleanup } from '@/lib/session-cleanup'
 import type { Query } from '@anthropic-ai/claude-agent-sdk'
@@ -240,19 +240,6 @@ export async function POST(req: Request) {
       db.prepare('INSERT INTO messages (id, session_id, role, content) VALUES (?, ?, ?, ?)').run(
         assistantMsgId, sessionId, 'assistant', JSON.stringify(blocks)
       )
-
-      // Append to daily memory
-      const assistantText = blocks
-        .filter((b) => b.type === 'text' && b.text)
-        .map((b) => b.text as string)
-        .join(' ')
-      const toolNames = blocks
-        .filter((b) => b.type === 'tool_use')
-        .map((b) => b.name as string)
-      const memorySummary = toolNames.length > 0
-        ? `User: ${effectiveMessage.slice(0, 80)} → Agent used ${toolNames.join(', ')}${assistantText ? '. Response: ' + assistantText.slice(0, 120) : ''}`
-        : `User: ${effectiveMessage.slice(0, 80)} → Agent: ${assistantText.slice(0, 150)}`
-      appendDailyMemory(session.workspace, memorySummary)
 
       // Update session title
       const msgCount = db.prepare('SELECT COUNT(*) as count FROM messages WHERE session_id = ?').get(sessionId) as { count: number }

@@ -464,26 +464,6 @@ export function loadRulesContext(workspaceId: string): string {
 }
 
 /**
- * Append an entry to today's daily memory file.
- */
-export function appendDailyMemory(workspaceId: string, entry: string): void {
-  ensureWorkspaceDir(workspaceId)
-
-  const date = formatDate(new Date())
-  const filename = `memory/${date}.md`
-  const filePath = path.join(getWorkspacePath(workspaceId), filename)
-
-  const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false })
-  const line = `\n[${timestamp}] ${entry}\n`
-
-  if (fs.existsSync(filePath)) {
-    fs.appendFileSync(filePath, line, 'utf-8')
-  } else {
-    fs.writeFileSync(filePath, `# Daily Memory — ${date}\n${line}`, 'utf-8')
-  }
-}
-
-/**
  * Archive daily memory files older than retentionDays.
  * Appends a summary line to memory/archive.md and deletes the old file.
  */

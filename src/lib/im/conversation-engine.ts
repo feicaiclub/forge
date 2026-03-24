@@ -10,7 +10,6 @@
  *   - SDK streaming consumption
  *   - Permission callbacks during streaming
  *   - Assistant message persistence
- *   - Daily memory append
  *   - Session title/timestamp update
  */
 
@@ -21,7 +20,7 @@ import type { ForgeAttachment } from '@/lib/sdk/client'
 import { getUploadsDir } from '@/lib/forge-data'
 import fs from 'fs'
 import path from 'path'
-import { appendDailyMemory, archiveOldMemories } from '@/lib/workspace-fs'
+import { archiveOldMemories } from '@/lib/workspace-fs'
 import type { PermissionResult, PermissionUpdate, SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import type { ConversationCallbacks, ConversationResult, ImPermissionRequest, IncomingMessage } from './types'
 
@@ -190,14 +189,6 @@ export class ConversationEngine {
     db.prepare('INSERT INTO messages (id, session_id, role, content) VALUES (?, ?, ?, ?)').run(
       assistantMsgId, sessionId, 'assistant', JSON.stringify(result.blocks),
     )
-
-    // Append to daily memory
-    const memorySummary = result.toolsUsed.length > 0
-      ? `[IM/${msg.channelType}] User: ${msg.text.slice(0, 80)} → Agent used ${result.toolsUsed.join(', ')}${result.text ? '. Response: ' + result.text.slice(0, 120) : ''}`
-      : `[IM/${msg.channelType}] User: ${msg.text.slice(0, 80)} → Agent: ${result.text.slice(0, 150)}`
-    try {
-      appendDailyMemory(workspace, memorySummary)
-    } catch { /* ignore memory errors */ }
 
     // Update session title + timestamp
     const msgCount = db.prepare('SELECT COUNT(*) as count FROM messages WHERE session_id = ?')
