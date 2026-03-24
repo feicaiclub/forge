@@ -337,7 +337,7 @@ class BridgeManager {
       const response = await executeImCommand(command, msg, this.router, adapter, {
         stopActiveTask: (key) => this.stopActiveTask(key),
       })
-      await this.delivery.deliver(adapter, msg.chatId, response)
+      await this.delivery.deliver(adapter, msg.chatId, response, { skipDedup: true })
 
       // Emit command event for desktop sync
       const bindingInfo = this.router.getBindingInfo(msg.channelType, msg.chatId)
@@ -353,7 +353,7 @@ class BridgeManager {
     const unknownHint = checkUnknownCommand(msg.text)
     if (unknownHint) {
       console.log(`[BridgeManager] Unknown command attempt: ${msg.text.split(/\s+/)[0]}`)
-      await this.delivery.deliver(adapter, msg.chatId, unknownHint)
+      await this.delivery.deliver(adapter, msg.chatId, unknownHint, { skipDedup: true })
       return
     }
 
