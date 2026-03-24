@@ -11,7 +11,8 @@ Forge gives you a full desktop GUI for Claude agents, with the ability to bridge
 - **IM Bridge** — Bridge your agent to Feishu, Telegram, and Discord. Chat with your agent from your phone. Receive/send images and files
 - **Scheduled Tasks** — Cron-based task scheduling with IM notification delivery. Heartbeat monitoring with customizable checklists
 - **Project Workspaces** — Each project folder gets its own agent personality, memory, and configuration
-- **Memory System** — MEMORY.md index (first 200 lines auto-loaded) + topic files (on-demand) + daily logs. Aligned with Claude Code's auto memory architecture
+- **Memory System** — MEMORY.md index (first 200 lines auto-loaded) + topic files (on-demand) + Agent-driven daily logs. Aligned with Claude Code's auto memory architecture
+- **`/init` Interview** — Conversational workspace setup: Agent asks 6 questions, then generates personalized config files from pre-filled templates (behavioral guidelines, session rules, memory norms)
 - **Skills & Agents** — Global skills/agents shared across projects (`~/.claude/skills/`, `~/.claude/agents/`), compatible with Claude Code
 - **Multi-Provider** — Claude Opus/Sonnet/Haiku, Kimi, GLM, MiniMax, Qwen, and custom OpenAI-compatible endpoints
 - **Bilingual** — Full Chinese and English UI
@@ -68,6 +69,7 @@ forge/
 │       ├── im/        # IM Bridge (adapters, bridge-manager, delivery)
 │       ├── cron/      # Scheduled task engine
 │       └── ...        # DB, workspace-fs, providers, etc.
+├── templates/         # /init config file templates
 ├── build/             # Electron build resources
 └── electron-builder.json  # Packaging configuration
 ```
