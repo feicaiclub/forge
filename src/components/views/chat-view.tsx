@@ -40,13 +40,18 @@ const MODEL_OPTIONS = [
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', provider: 'Anthropic' },
   // Moonshot/Kimi (Anthropic-compatible)
   { id: 'kimi-k2.5', label: 'Kimi K2.5', provider: 'Moonshot' },
+  { id: 'kimi-k2-thinking', label: 'Kimi K2 Thinking', provider: 'Moonshot' },
   // Zhipu/GLM (Anthropic-compatible)
   { id: 'glm-5', label: 'GLM-5', provider: 'Zhipu' },
+  { id: 'glm-5-turbo', label: 'GLM-5 Turbo', provider: 'Zhipu' },
   { id: 'glm-4-plus', label: 'GLM-4 Plus', provider: 'Zhipu' },
   // MiniMax (Anthropic-compatible)
+  { id: 'MiniMax-M2.7', label: 'MiniMax M2.7', provider: 'MiniMax' },
+  { id: 'MiniMax-M2.7-highspeed', label: 'MiniMax M2.7 Highspeed', provider: 'MiniMax' },
   { id: 'MiniMax-M2.5', label: 'MiniMax M2.5', provider: 'MiniMax' },
   // Qwen/DashScope (Anthropic-compatible)
   { id: 'qwen3.5-plus', label: 'Qwen 3.5 Plus', provider: 'Qwen' },
+  { id: 'qwen3.5-flash', label: 'Qwen 3.5 Flash', provider: 'Qwen' },
   { id: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus', provider: 'Qwen' },
   { id: 'qwen-max', label: 'Qwen Max', provider: 'Qwen' },
   { id: 'qwen-plus', label: 'Qwen Plus', provider: 'Qwen' },

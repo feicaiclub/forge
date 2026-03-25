@@ -67,13 +67,18 @@ const MODEL_TO_PROVIDER: Record<string, string> = {
   'claude-haiku-4-5': 'anthropic',
   // Moonshot/Kimi
   'kimi-k2.5': 'moonshot',
+  'kimi-k2-thinking': 'moonshot',
   // Zhipu/GLM
   'glm-5': 'zhipu',
+  'glm-5-turbo': 'zhipu',
   'glm-4-plus': 'zhipu',
   // MiniMax
+  'MiniMax-M2.7': 'minimax',
+  'MiniMax-M2.7-highspeed': 'minimax',
   'MiniMax-M2.5': 'minimax',
   // Qwen/DashScope
   'qwen3.5-plus': 'qwen',
+  'qwen3.5-flash': 'qwen',
   'qwen3-coder-plus': 'qwen',
   'qwen-max': 'qwen',
   'qwen-plus': 'qwen',

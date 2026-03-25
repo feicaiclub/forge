@@ -106,7 +106,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
           'Authorization': `Bearer ${provider.api_key}`,
         },
         body: JSON.stringify({
-          model: 'MiniMax-M2.5',
+          model: 'MiniMax-M2.7',
           max_tokens: 1,
           messages: [{ role: 'user', content: 'hi' }],
         }),
