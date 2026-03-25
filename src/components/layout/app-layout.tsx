@@ -14,6 +14,7 @@ import { ScheduleView } from '@/components/views/schedule-view'
 import { SettingsView } from '@/components/views/settings-view'
 import { MarketplaceView } from '@/components/views/marketplace-view'
 import { Onboarding } from '@/components/onboarding'
+import { ProjectSelection } from '@/components/project-selection'
 import { useSessions } from '@/hooks/use-sessions'
 import { useChat } from '@/hooks/use-chat'
 import { useWorkspaces } from '@/hooks/use-workspaces'
@@ -23,20 +24,12 @@ import { useTheme } from '@/components/providers/theme-provider'
 import type { View } from '@/lib/types'
 import { GLOBAL_WORKSPACE_ID } from '@/lib/types'
 
+import { BUILTIN_MODELS } from '@/lib/models'
+
 /** Model ID → provider type (lowercase) for per-provider settings lookup */
-const MODEL_PROVIDER_MAP: Record<string, string> = {
-  'claude-opus-4-6': 'anthropic',
-  'claude-sonnet-4-6': 'anthropic',
-  'claude-haiku-4-5': 'anthropic',
-  'kimi-k2.5': 'moonshot',
-  'glm-5': 'zhipu',
-  'glm-4-plus': 'zhipu',
-  'MiniMax-M2.5': 'minimax',
-  'qwen3.5-plus': 'qwen',
-  'qwen3-coder-plus': 'qwen',
-  'qwen-max': 'qwen',
-  'qwen-plus': 'qwen',
-}
+const MODEL_PROVIDER_MAP: Record<string, string> = Object.fromEntries(
+  BUILTIN_MODELS.map(m => [m.id, m.providerId])
+)
 
 export function AppLayout() {
   const [activeView, setActiveView] = useState<View>('chat')
@@ -74,12 +67,9 @@ export function AppLayout() {
     }
   }, [settingsLoading, settings.onboarding_completed, settings.language, settings.theme, setLocale, setTheme])
 
-  // Set default active workspace to the most recently opened
-  useEffect(() => {
-    if (!activeWorkspaceId && workspaces.length > 0) {
-      setActiveWorkspaceId(workspaces[0].id)
-    }
-  }, [workspaces, activeWorkspaceId])
+  // NOTE: We intentionally do NOT auto-select a workspace on startup.
+  // The user must explicitly choose a project from the ProjectSelection page.
+  // This aligns with Cursor/VS Code behavior where each launch starts with project selection.
 
   const { sessions, loading: sessionsLoading, createSession, updateSession, deleteSession, refreshSessions } = useSessions()
   const { messages, streaming, isThinking, error, sendMessage, loadMessages, stopStreaming, clearMessages, sendPermissionDecision } = useChat(activeSessionId)
@@ -420,6 +410,28 @@ export function AppLayout() {
       setShowOnboarding(false)
       if (wsId) setActiveWorkspaceId(wsId)
     }} />
+  }
+
+  // Show project selection page until user explicitly picks a workspace.
+  // This runs on every launch (not just first time) — no auto-restore.
+  if (!activeWorkspaceId) {
+    return <ProjectSelection
+      workspaces={workspaces}
+      onSelectWorkspace={(id) => {
+        setActiveWorkspaceId(id)
+        touchWorkspace(id)
+      }}
+      onOpenFolder={async () => {
+        const folderPath = await window.electronAPI?.openDirectoryDialog()
+        if (!folderPath) return
+        const ws = await openProjectFolder(folderPath)
+        setActiveWorkspaceId(ws.id)
+      }}
+      onRemoveWorkspace={async (id) => {
+        await removeProject(id)
+        await refreshWorkspaces()
+      }}
+    />
   }
 
   return (
