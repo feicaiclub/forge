@@ -86,37 +86,39 @@ function copyTemplates(standaloneDir) {
 }
 
 // Step 3b: Fix pnpm hoisting gaps in standalone node_modules.
-// pnpm doesn't hoist all dependencies, so some modules that Next.js's
-// require-hook expects at node_modules/<name> are only in .pnpm/ deep paths.
-// Create symlinks for any missing top-level references.
+// pnpm uses a strict node_modules layout where dependencies are nested in .pnpm/.
+// Node.js require() can't resolve them from the top-level. Scan .pnpm/ and create
+// top-level copies for any packages that aren't already hoisted.
 function fixPnpmHoisting(standaloneDir) {
   const nodeModules = join(standaloneDir, 'node_modules')
   const pnpmDir = join(nodeModules, '.pnpm')
   if (!existsSync(pnpmDir)) return
 
-  // Modules that Next.js require-hook.js expects at top level
-  const required = ['styled-jsx']
   let fixed = 0
+  const pnpmEntries = readdirSync(pnpmDir)
 
-  for (const mod of required) {
-    const target = join(nodeModules, mod)
-    if (existsSync(target)) continue  // Already hoisted
+  for (const entry of pnpmEntries) {
+    const entryModules = join(pnpmDir, entry, 'node_modules')
+    if (!existsSync(entryModules)) continue
 
-    // Find it in .pnpm/
-    const pattern = `${mod}@`
-    let found = null
-    try {
-      for (const entry of readdirSync(pnpmDir)) {
-        if (entry.startsWith(pattern)) {
-          const candidate = join(pnpmDir, entry, 'node_modules', mod)
-          if (existsSync(candidate)) { found = candidate; break }
+    let pkgs
+    try { pkgs = readdirSync(entryModules) } catch { continue }
+
+    for (const pkg of pkgs) {
+      // Skip .pnpm internal references and already-hoisted packages
+      if (pkg === '.pnpm' || pkg === 'node_modules') continue
+
+      const topLevel = join(nodeModules, pkg)
+      if (existsSync(topLevel)) continue  // Already hoisted
+
+      const source = join(entryModules, pkg)
+      try {
+        const stat = lstatSync(source)
+        if (stat.isDirectory()) {
+          cpSync(source, topLevel, { recursive: true })
+          fixed++
         }
-      }
-    } catch { continue }
-
-    if (found) {
-      cpSync(found, target, { recursive: true })
-      fixed++
+      } catch { /* skip */ }
     }
   }
 
