@@ -20,7 +20,7 @@
     {
       "from": ".next/standalone/",
       "to": "standalone/",
-      "filter": ["**/*", "!node_modules", "!release"]
+      "filter": ["**/*", "!node_modules", "!.next", "!.forge-data", "!.env", "!.env.*", "!forge.db*", "!release"]
     },
     {
       "from": ".next/standalone/node_modules/",
@@ -45,6 +45,11 @@
     {
       "from": "templates/",
       "to": "templates/",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "node-runtime/",
+      "to": "node-runtime/",
       "filter": ["**/*"]
     }
   ],

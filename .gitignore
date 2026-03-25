@@ -16,6 +16,9 @@ forge.db
 forge.db-shm
 forge.db-wal
 
+# Bundled Node.js runtime (downloaded during build)
+node-runtime/
+
 # Internal dev files
 .claude/
 DEV-PLAN.md

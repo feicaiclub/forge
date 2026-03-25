@@ -8,31 +8,21 @@ import { existsSync, watch, type FSWatcher } from 'node:fs'
 const isDev = !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
+let serverUrl: string | null = null  // Module-level for activate handler
 
 /**
- * Find the system Node.js binary.
- * GUI apps on macOS don't inherit shell PATH (nvm/fnm/homebrew paths missing).
- * Search common installation locations in priority order.
+ * Find the Node.js binary to run the standalone server.
+ * Production: use the bundled Node.js runtime (node-runtime/bin/node in app resources).
+ * Dev: use system Node.js (available in PATH when launched from terminal).
  */
 function findNodeBinary(): string {
-  const home = os.homedir()
-  const candidates = [
-    // Standard system paths
-    '/usr/local/bin/node',
-    '/opt/homebrew/bin/node',
-    // fnm
-    path.join(home, '.fnm', 'aliases', 'default', 'bin', 'node'),
-    // nvm
-    path.join(home, '.nvm', 'current', 'bin', 'node'),
-    // Volta
-    path.join(home, '.volta', 'bin', 'node'),
-    // Homebrew on Intel Mac
-    '/usr/local/opt/node/bin/node',
-  ]
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate
+  if (!isDev) {
+    // Production: use bundled Node.js runtime
+    const bundled = path.join(process.resourcesPath, 'node-runtime', 'bin', 'node')
+    if (existsSync(bundled)) return bundled
+    console.error('[server] Bundled Node.js not found at:', bundled)
   }
-  // Fallback: hope it's in PATH (works when launched from terminal)
+  // Dev mode or fallback: system Node.js
   return 'node'
 }
 let serverProcess: ChildProcess | null = null
@@ -250,16 +240,23 @@ app.whenReady().then(async () => {
     return shell.openPath(targetPath)
   })
 
-  let url: string
-
-  if (isDev) {
-    url = 'http://localhost:3000'
-  } else {
-    const port = await startServer()
-    url = `http://127.0.0.1:${port}`
+  try {
+    if (isDev) {
+      serverUrl = 'http://localhost:3000'
+    } else {
+      const port = await startServer()
+      serverUrl = `http://127.0.0.1:${port}`
+    }
+    createWindow(serverUrl)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[server] Failed to start:', msg)
+    dialog.showErrorBox(
+      'Forge — Failed to Start',
+      `The server could not be started.\n\n${msg}\n\nPlease ensure Node.js is installed and try again.`
+    )
+    app.quit()
   }
-
-  createWindow(url)
 })
 
 app.on('window-all-closed', () => {
@@ -267,9 +264,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0 && mainWindow === null) {
-    const url = isDev ? 'http://localhost:3000' : ''
-    if (url) createWindow(url)
+  if (BrowserWindow.getAllWindows().length === 0 && mainWindow === null && serverUrl) {
+    createWindow(serverUrl)
   }
 })
 
