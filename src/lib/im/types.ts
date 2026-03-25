@@ -30,6 +30,7 @@ export interface IncomingMessage {
   channelType: ChannelType
   channelId: string        // DB channel id ('telegram' | 'feishu' | 'discord')
   chatId: string           // Platform-specific chat identifier
+  messageId?: string       // Platform message ID for deduplication
   senderId: string
   senderName: string
   text: string

@@ -253,6 +253,27 @@ class BridgeManager {
   // Poll loop
   // ---------------------------------------------------------------------------
 
+  /** Recently processed message IDs — prevents duplicate processing when SDK delivers same event twice */
+  private processedMessageIds = new Set<string>()
+  private processedMessageIdCleanupTimer: ReturnType<typeof setTimeout> | null = null
+
+  private isMessageDuplicate(msg: IncomingMessage): boolean {
+    if (!msg.messageId) return false // No ID, can't dedup
+    if (this.processedMessageIds.has(msg.messageId)) {
+      console.log(`[BridgeManager] Duplicate message skipped: ${msg.messageId}`)
+      return true
+    }
+    this.processedMessageIds.add(msg.messageId)
+    // Periodic cleanup: keep only last 5 minutes of IDs
+    if (!this.processedMessageIdCleanupTimer) {
+      this.processedMessageIdCleanupTimer = setTimeout(() => {
+        this.processedMessageIds.clear()
+        this.processedMessageIdCleanupTimer = null
+      }, 300_000)
+    }
+    return false
+  }
+
   private startPollLoop(channelId: string, adapter: ChannelAdapter): void {
     const controller = new AbortController()
     this.pollControllers.set(channelId, controller)
@@ -279,6 +300,9 @@ class BridgeManager {
           }
           continue
         }
+
+        // Skip duplicate messages (SDK may redeliver on reconnect)
+        if (this.isMessageDuplicate(msg)) continue
 
         // Process message in background (don't block poll loop)
         // NOTE: Backpressure is applied INSIDE processMessage, after the session lock,

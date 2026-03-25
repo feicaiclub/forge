@@ -511,6 +511,7 @@ export class FeishuAdapter extends ChannelAdapter {
         channelType: 'feishu',
         channelId: 'feishu',
         chatId,
+        messageId: msgId,
         senderId,
         senderName: 'User',
         text: text.replace(/@_user_\d+/g, '').trim(),

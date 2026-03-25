@@ -217,10 +217,10 @@ export function getDb(): Database.Database {
     INSERT OR IGNORE INTO im_channels (id, type) VALUES ('telegram', 'telegram');
     INSERT OR IGNORE INTO im_channels (id, type) VALUES ('discord', 'discord');
 
-    -- Seed heartbeat task
-    INSERT OR IGNORE INTO cron_tasks (id, name, is_heartbeat, schedule, action, config)
+    -- Seed heartbeat task (disabled by default — user enables in Schedule view)
+    INSERT OR IGNORE INTO cron_tasks (id, name, is_heartbeat, schedule, action, config, enabled)
       VALUES ('heartbeat', 'Heartbeat', 1, '*/30 * * * *', '/heartbeat',
-        '{"check_interval":"30m","notify_channel":"telegram","notification_email":"","checklist_path":"HEARTBEAT.md"}');
+        '{"check_interval":"30m","notify_channel":"","notification_email":"","checklist_path":"HEARTBEAT.md"}', 0);
   `)
 
   // --- Migrations ---
