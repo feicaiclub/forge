@@ -1,0 +1,110 @@
+name: Build & Package
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-14  # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Privacy check
+        run: |
+          echo "Checking standalone for leaked data..."
+          if [ -d ".next/standalone/.forge-data" ]; then
+            echo "❌ .forge-data leaked into standalone!"
+            exit 1
+          fi
+          echo "✅ No .forge-data in standalone"
+
+          if find .next/standalone/ -name "forge.db*" 2>/dev/null | grep -q .; then
+            echo "❌ Database files found in standalone!"
+            exit 1
+          fi
+          echo "✅ No database files in standalone"
+
+          if find .next/standalone/ -name ".env*" 2>/dev/null | grep -q .; then
+            echo "❌ .env files found in standalone!"
+            exit 1
+          fi
+          echo "✅ No .env files in standalone"
+
+      - name: Package macOS DMG
+        run: pnpm package:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: Forge-macOS-arm64
+          path: release/Forge-*.dmg
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Package Windows NSIS
+        run: pnpm package:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Forge-Windows-x64
+          path: release/Forge-*.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-mac, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Forge-macOS-arm64/Forge-*.dmg
+            Forge-Windows-x64/Forge-*.exe
+          draft: true
+          generate_release_notes: true

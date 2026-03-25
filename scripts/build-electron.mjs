@@ -187,14 +187,17 @@ function cleanForgeData(standaloneDir) {
 async function bundleNodeRuntime() {
   const NODE_VERSION = '22.22.2'
   const arch = process.arch  // arm64 or x64
-  const platform = process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win' : 'linux'
-  const ext = platform === 'win' ? 'zip' : 'tar.gz'
+  const isWin = process.platform === 'win32'
+  const platform = process.platform === 'darwin' ? 'darwin' : isWin ? 'win' : 'linux'
+  const ext = isWin ? 'zip' : 'tar.gz'
   const dirName = `node-v${NODE_VERSION}-${platform}-${arch}`
   const url = `https://nodejs.org/dist/v${NODE_VERSION}/${dirName}.${ext}`
   const dest = join(process.cwd(), 'node-runtime')
 
+  // Node binary path differs by platform
+  const nodeBin = isWin ? join(dest, 'node.exe') : join(dest, 'bin', 'node')
+
   // Skip if already downloaded
-  const nodeBin = join(dest, 'bin', 'node')
   if (existsSync(nodeBin)) {
     const ver = execSync(`"${nodeBin}" --version`, { encoding: 'utf-8' }).trim()
     if (ver === `v${NODE_VERSION}`) {
@@ -205,22 +208,53 @@ async function bundleNodeRuntime() {
 
   console.log(`⬇️  Downloading Node.js ${NODE_VERSION} (${platform}-${arch})...`)
   rmSync(dest, { recursive: true, force: true })
-
-  const tarball = join(process.cwd(), `node-runtime.${ext}`)
-  execSync(`curl -sL "${url}" -o "${tarball}"`)
   mkdirSync(dest, { recursive: true })
-  execSync(`tar -xzf "${tarball}" --strip-components=1 -C "${dest}"`)
-  rmSync(tarball, { force: true })
 
-  // Remove unnecessary files to reduce size (keep only bin/node)
+  const archive = join(process.cwd(), `node-runtime.${ext}`)
+
+  if (isWin) {
+    // Windows: download zip, extract with PowerShell
+    execSync(`curl -sL "${url}" -o "${archive}"`)
+    execSync(`powershell -Command "Expand-Archive -Path '${archive}' -DestinationPath '${dest}' -Force"`)
+    // Move files from nested dir to dest root
+    const nested = join(dest, dirName)
+    if (existsSync(nested)) {
+      for (const entry of readdirSync(nested)) {
+        const src = join(nested, entry)
+        const dst = join(dest, entry)
+        cpSync(src, dst, { recursive: true })
+      }
+      rmSync(nested, { recursive: true, force: true })
+    }
+  } else {
+    // macOS/Linux: download tar.gz, extract with tar
+    execSync(`curl -sL "${url}" -o "${archive}"`)
+    execSync(`tar -xzf "${archive}" --strip-components=1 -C "${dest}"`)
+  }
+  rmSync(archive, { force: true })
+
+  // Remove unnecessary files to reduce size
   for (const dir of ['include', 'share', 'lib']) {
     rmSync(join(dest, dir), { recursive: true, force: true })
   }
-  // Remove npm/npx/corepack from bin (only need node)
-  const binDir = join(dest, 'bin')
-  for (const entry of readdirSync(binDir)) {
-    if (entry !== 'node') {
-      rmSync(join(binDir, entry), { force: true })
+
+  if (isWin) {
+    // Windows: keep only node.exe from root, remove npm/npx
+    for (const entry of readdirSync(dest)) {
+      if (entry === 'node.exe') continue
+      const fp = join(dest, entry)
+      try {
+        const stat = lstatSync(fp)
+        if (stat.isFile() && entry !== 'node.exe') rmSync(fp, { force: true })
+      } catch { /* skip */ }
+    }
+  } else {
+    // Unix: keep only bin/node
+    const binDir = join(dest, 'bin')
+    if (existsSync(binDir)) {
+      for (const entry of readdirSync(binDir)) {
+        if (entry !== 'node') rmSync(join(binDir, entry), { force: true })
+      }
     }
   }
 
@@ -230,7 +264,10 @@ async function bundleNodeRuntime() {
 
 // Step 7: Rebuild better-sqlite3 against the bundled Node.js version
 function rebuildNativeModules() {
-  const nodeBin = join(process.cwd(), 'node-runtime', 'bin', 'node')
+  const isWin = process.platform === 'win32'
+  const nodeBin = isWin
+    ? join(process.cwd(), 'node-runtime', 'node.exe')
+    : join(process.cwd(), 'node-runtime', 'bin', 'node')
   if (!existsSync(nodeBin)) {
     console.log('⚠️  No bundled Node.js found — skipping native module rebuild')
     return

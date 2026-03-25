@@ -17,8 +17,11 @@ let serverUrl: string | null = null  // Module-level for activate handler
  */
 function findNodeBinary(): string {
   if (!isDev) {
-    // Production: use bundled Node.js runtime
-    const bundled = path.join(process.resourcesPath, 'node-runtime', 'bin', 'node')
+    // Production: use bundled Node.js runtime (path differs by platform)
+    const isWin = process.platform === 'win32'
+    const bundled = isWin
+      ? path.join(process.resourcesPath, 'node-runtime', 'node.exe')
+      : path.join(process.resourcesPath, 'node-runtime', 'bin', 'node')
     if (existsSync(bundled)) return bundled
     console.error('[server] Bundled Node.js not found at:', bundled)
   }
@@ -79,18 +82,25 @@ async function startServer(): Promise<number> {
   const nodeBin = findNodeBinary()
   console.log(`[server] Using Node.js: ${nodeBin}`)
 
-  // GUI apps on macOS don't inherit shell PATH. Extend PATH with common
+  // GUI apps may not inherit shell PATH. Extend PATH with common
   // tool installation locations so the SDK can find `claude` CLI and other binaries.
   const home = os.homedir()
+  const isWin = process.platform === 'win32'
+  const pathSep = isWin ? ';' : ':'
   const extraPaths = [
     path.join(home, '.local', 'bin'),        // Claude Code CLI default location
     path.join(home, '.fnm', 'aliases', 'default', 'bin'),
     path.join(home, '.nvm', 'versions', 'node', 'current', 'bin'),
     path.join(home, '.volta', 'bin'),
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
+    ...(isWin ? [
+      path.join(home, 'AppData', 'Roaming', 'npm'),       // npm global on Windows
+      path.join(home, 'AppData', 'Local', 'Programs', 'nodejs'),
+    ] : [
+      '/opt/homebrew/bin',
+      '/usr/local/bin',
+    ]),
   ].filter(p => existsSync(p))
-  const extendedPath = [...extraPaths, process.env.PATH || ''].join(':')
+  const extendedPath = [...extraPaths, process.env.PATH || ''].join(pathSep)
 
   serverProcess = spawn(nodeBin, [serverScript], {
     env: {

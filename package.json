@@ -20,6 +20,8 @@
     "build": "pnpm build:next && pnpm build:electron",
     "package": "pnpm build && electron-builder",
     "package:mac": "pnpm build && electron-builder --mac",
+    "package:win": "pnpm build && electron-builder --win",
+    "package:linux": "pnpm build && electron-builder --linux",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
