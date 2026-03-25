@@ -54,10 +54,16 @@ export function AppLayout() {
   const { setTheme } = useTheme()
   const { workspaces, openProjectFolder, removeProject, touchWorkspace, refreshWorkspaces } = useWorkspaces()
 
-  // Check onboarding status and load language once settings load
+  // Onboarding check: only on initial settings load, never re-triggered by language/theme changes
+  useEffect(() => {
+    if (!settingsLoading && showOnboarding === null) {
+      setShowOnboarding(settings.onboarding_completed !== 'true')
+    }
+  }, [settingsLoading, settings.onboarding_completed, showOnboarding])
+
+  // Apply language and theme from settings (safe to re-run on changes)
   useEffect(() => {
     if (!settingsLoading) {
-      setShowOnboarding(settings.onboarding_completed !== 'true')
       if (settings.language === 'zh' || settings.language === 'en') {
         setLocale(settings.language)
       }
@@ -65,7 +71,7 @@ export function AppLayout() {
         setTheme(settings.theme)
       }
     }
-  }, [settingsLoading, settings.onboarding_completed, settings.language, settings.theme, setLocale, setTheme])
+  }, [settingsLoading, settings.language, settings.theme, setLocale, setTheme])
 
   // NOTE: We intentionally do NOT auto-select a workspace on startup.
   // The user must explicitly choose a project from the ProjectSelection page.
