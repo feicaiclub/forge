@@ -49,10 +49,50 @@ export class ConversationEngine {
       .get() as { value: string } | undefined
     const permissionMode = permModeSetting?.value || 'confirm'
 
-    // Save user message
+    // Save images/files to uploads dir ONCE, then use for both DB content and SDK attachments
+    const uploadsDir = getUploadsDir()
+    const savedImages: Array<{ filename: string; filePath: string; name: string; mimeType: string }> = []
+    const savedFiles: Array<{ filename: string; filePath: string; name: string; mimeType: string; size: number; tier: string }> = []
+
+    if (msg.images && msg.images.length > 0) {
+      for (const img of msg.images) {
+        const ext = img.mimeType === 'image/png' ? '.png' : img.mimeType === 'image/gif' ? '.gif' : img.mimeType === 'image/webp' ? '.webp' : '.jpg'
+        const filename = `im_${Date.now()}_${Math.random().toString(36).slice(2, 6)}${ext}`
+        const filePath = path.join(uploadsDir, filename)
+        fs.writeFileSync(filePath, Buffer.from(img.data, 'base64'))
+        savedImages.push({ filename, filePath, name: img.name || 'image', mimeType: img.mimeType })
+      }
+    }
+    if (msg.files && msg.files.length > 0) {
+      for (const file of msg.files) {
+        const filename = `im_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)}`
+        const filePath = path.join(uploadsDir, filename)
+        fs.writeFileSync(filePath, file.data)
+        const isPdf = file.mimeType === 'application/pdf' || file.name.endsWith('.pdf')
+        const isText = file.mimeType.startsWith('text/') || ['.txt','.md','.csv','.json','.yaml','.yml','.toml','.xml','.py','.js','.ts','.go','.rs','.java','.cpp','.rb','.sh','.sql'].some(e => file.name.endsWith(e))
+        savedFiles.push({ filename, filePath, name: file.name, mimeType: file.mimeType, size: file.size, tier: isPdf ? 'pdf' : isText ? 'text' : 'binary' })
+      }
+    }
+
+    // Save user message with attachment blocks so desktop ChatView can render them
     const userMsgId = crypto.randomUUID()
+    const hasAttachments = savedImages.length > 0 || savedFiles.length > 0
+    let userContent: string
+    if (hasAttachments) {
+      const blocks: Array<Record<string, unknown>> = []
+      if (msg.text) blocks.push({ type: 'text', text: msg.text })
+      for (const img of savedImages) {
+        blocks.push({ type: 'image_attachment', url: `/api/upload/${img.filename}`, name: img.name })
+      }
+      for (const file of savedFiles) {
+        blocks.push({ type: 'file_attachment', url: `/api/upload/${file.filename}`, name: file.name, size: file.size, mimeType: file.mimeType })
+      }
+      userContent = JSON.stringify(blocks)
+    } else {
+      userContent = msg.text
+    }
     db.prepare('INSERT INTO messages (id, session_id, role, content) VALUES (?, ?, ?, ?)').run(
-      userMsgId, sessionId, 'user', msg.text,
+      userMsgId, sessionId, 'user', userContent,
     )
 
     // Throttle archiving: max once per hour
@@ -107,29 +147,11 @@ export class ConversationEngine {
       callbacks.abortSignal.addEventListener('abort', () => localAbort.abort(), { once: true })
     }
 
-    // Convert IM images/files to ForgeAttachment[] (save to uploads dir for SDK)
-    const attachments: ForgeAttachment[] = []
-    if (msg.images && msg.images.length > 0) {
-      const uploadsDir = getUploadsDir()
-      for (const img of msg.images) {
-        const ext = img.mimeType === 'image/png' ? '.png' : img.mimeType === 'image/gif' ? '.gif' : img.mimeType === 'image/webp' ? '.webp' : '.jpg'
-        const filename = `im_${Date.now()}_${Math.random().toString(36).slice(2, 6)}${ext}`
-        const filePath = path.join(uploadsDir, filename)
-        fs.writeFileSync(filePath, Buffer.from(img.data, 'base64'))
-        attachments.push({ name: img.name || filename, serverPath: filePath, mimeType: img.mimeType, tier: 'image' })
-      }
-    }
-    if (msg.files && msg.files.length > 0) {
-      const uploadsDir = getUploadsDir()
-      for (const file of msg.files) {
-        const filename = `im_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)}`
-        const filePath = path.join(uploadsDir, filename)
-        fs.writeFileSync(filePath, file.data)
-        const isPdf = file.mimeType === 'application/pdf' || file.name.endsWith('.pdf')
-        const isText = file.mimeType.startsWith('text/') || ['.txt','.md','.csv','.json','.yaml','.yml','.toml','.xml','.py','.js','.ts','.go','.rs','.java','.cpp','.rb','.sh','.sql'].some(e => file.name.endsWith(e))
-        attachments.push({ name: file.name, serverPath: filePath, mimeType: file.mimeType, tier: isPdf ? 'pdf' : isText ? 'text' : 'binary' })
-      }
-    }
+    // Build ForgeAttachment[] from already-saved files (no duplicate writes)
+    const attachments: ForgeAttachment[] = [
+      ...savedImages.map(img => ({ name: img.name, serverPath: img.filePath, mimeType: img.mimeType, tier: 'image' as const })),
+      ...savedFiles.map(f => ({ name: f.name, serverPath: f.filePath, mimeType: f.mimeType, tier: f.tier as ForgeAttachment['tier'] })),
+    ]
 
     // Create SDK query
     // Skip MCP servers for IM to reduce subprocess startup overhead (~2-3s savings)
