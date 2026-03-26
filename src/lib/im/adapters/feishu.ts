@@ -34,8 +34,8 @@ export class FeishuAdapter extends ChannelAdapter {
 
   // Watchdog: detect silent WSClient disconnection (P7 fix)
   private lastEventTime = 0
-  private static readonly WATCHDOG_TIMEOUT_MS = 30_000  // 30s — detect silent disconnect quickly
-  private static readonly STALE_THRESHOLD_MS = 45_000   // 45s without any event → assume dead
+  private static readonly WATCHDOG_TIMEOUT_MS = 10_000  // 10s — detect silent disconnect ASAP
+  private static readonly STALE_THRESHOLD_MS = 15_000   // 15s without any event → assume dead
 
   // Permission response callback
   private permissionCallback: ((requestId: string, decision: 'allow' | 'deny') => void) | null = null
@@ -80,12 +80,13 @@ export class FeishuAdapter extends ChannelAdapter {
     })
 
     // Create and start WSClient
-    // Enable SDK's internal auto-reconnect to maintain WebSocket heartbeat and connection stability.
-    // Without it, the WS silently disconnects after each conversation (no heartbeat pings).
+    // autoReconnect: false — we handle reconnection ourselves via watchdog (10s).
+    // SDK's autoReconnect has 120s+ delay which is too slow.
+    // SDK's autoReconnect also conflicts with our BridgeManager reconnection.
     this.wsClient = new Lark.WSClient({
       ...sdkConfig,
       loggerLevel: Lark.LoggerLevel.info,
-      autoReconnect: true,
+      autoReconnect: false,
     })
     await this.wsClient.start({ eventDispatcher: dispatcher })
 
