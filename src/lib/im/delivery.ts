@@ -82,6 +82,8 @@ export class DeliveryLayer {
     options?: DeliveryOptions,
   ): Promise<string | undefined> {
     const channelType = adapter.channelType
+    console.log(`[Delivery] deliver called: chat=${chatId}, text="${text.slice(0, 40)}", opts=${JSON.stringify(options || {})}`)
+
 
     // Typing indicator — bypass rate limiting and chunking
     if (options?.isTypingIndicator) {
@@ -105,7 +107,9 @@ export class DeliveryLayer {
     }
 
     // Rate limiting
+    console.log(`[Delivery] acquiring rate token...`)
     await this.acquireToken(chatId, channelType)
+    console.log(`[Delivery] token acquired, rendering...`)
 
     // Render markdown for platform
     const rendered = renderForPlatform(text, channelType)
@@ -135,6 +139,7 @@ export class DeliveryLayer {
         continue
       }
 
+      console.log(`[Delivery] sending chunk (${chunk.length} chars)...`)
       lastMsgId = await this.retryWithBackoff(async () => {
         return adapter.send({
           chatId,
@@ -143,6 +148,7 @@ export class DeliveryLayer {
           replyToMessageId: options?.replyToId,
         })
       })
+      console.log(`[Delivery] sent, msgId=${lastMsgId}`)
 
       // Track outbound reference
       if (lastMsgId) {
