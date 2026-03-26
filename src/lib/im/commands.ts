@@ -360,7 +360,7 @@ export async function executeImCommand(
     case 'model':
       return handleModel(cmd, msg, router)
     case 'mode':
-      return handleMode(cmd, msg, router)
+      return handleMode(cmd)
     case 'status':
       return handleStatus(msg, router)
     case 'stop':
@@ -837,23 +837,13 @@ function handleModel(cmd: ImCommand, msg: IncomingMessage, router: ChannelRouter
   return `${t('modelSwitched')} ${matched.label}`
 }
 
-function handleMode(cmd: ImCommand, msg: IncomingMessage, router: ChannelRouter): string {
+function handleMode(cmd: ImCommand): string {
   const db = getDb()
-  const info = router.getBindingInfo(msg.channelType, msg.chatId)
 
   if (cmd.args.length === 0) {
-    // Show current mode: check session first, fall back to global
-    let mode = 'confirm'
-    if (info?.sessionId) {
-      const session = db.prepare('SELECT permission_mode FROM sessions WHERE id = ?')
-        .get(info.sessionId) as { permission_mode: string } | undefined
-      if (session?.permission_mode) mode = session.permission_mode
-    }
-    if (mode === '') {
-      const setting = db.prepare("SELECT value FROM settings WHERE key = 'im_permission_mode'")
-        .get() as { value: string } | undefined
-      mode = setting?.value || 'confirm'
-    }
+    const setting = db.prepare("SELECT value FROM settings WHERE key = 'im_permission_mode'")
+      .get() as { value: string } | undefined
+    const mode = setting?.value || 'confirm'
     return [
       `${t('modeCurrent')}: ${mode}`,
       '',
@@ -869,12 +859,8 @@ function handleMode(cmd: ImCommand, msg: IncomingMessage, router: ChannelRouter)
     return t('modeInvalid')
   }
 
-  if (!info?.sessionId) {
-    return t('modeInvalid')
-  }
-
-  // Write to current session (per-session override, like /model)
-  db.prepare('UPDATE sessions SET permission_mode = ? WHERE id = ?').run(newMode, info.sessionId)
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('im_permission_mode', ?)")
+    .run(newMode)
 
   return `${t('modeSwitched')}: ${newMode}`
 }

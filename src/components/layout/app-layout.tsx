@@ -299,7 +299,7 @@ export function AppLayout() {
   }, [sessions, activeSessionId, settings])
 
   const handleSendMessage = useCallback(async (content: string, _permissionMode?: string, _thinkingMode?: string, attachments?: Array<{ name: string; filename: string; mimeType: string; tier: string }>) => {
-    const effectivePermMode = sessionPermMode || activeSession?.permissionMode || settings.desktop_permission_mode || 'confirm'
+    const effectivePermMode = sessionPermMode || settings.desktop_permission_mode || 'confirm'
     const effectiveThinkMode = sessionThinkMode || providerThinkingDefault
     await sendMessage(content, effectivePermMode, effectiveThinkMode, attachments)
     refreshSessions()
@@ -478,7 +478,7 @@ export function AppLayout() {
                   error={error}
                   workspaceName={activeWorkspace?.name || ''}
                   workspaceId={activeWorkspaceId}
-                  permissionMode={sessionPermMode || activeSession?.permissionMode || settings.desktop_permission_mode || 'confirm'}
+                  permissionMode={sessionPermMode || settings.desktop_permission_mode || 'confirm'}
                   thinkingMode={sessionThinkMode || providerThinkingDefault}
                   onSendMessage={handleSendMessage}
                   onStopStreaming={stopStreaming}
