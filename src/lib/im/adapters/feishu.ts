@@ -19,6 +19,8 @@ export class FeishuAdapter extends ChannelAdapter {
   private client: Lark.Client | null = null
   private wsClient: InstanceType<typeof Lark.WSClient> | null = null
   private running = false
+  /** Guard against orphaned WSClient connections delivering events after stop() */
+  private stopped = false
   private botOpenId = ''
   /** All known bot IDs (open_id, user_id, union_id, bot_id) for mention matching. */
   private botIds = new Set<string>()
@@ -46,6 +48,8 @@ export class FeishuAdapter extends ChannelAdapter {
   // ---------------------------------------------------------------------------
 
   async start(config: Record<string, string>): Promise<void> {
+    this.stopped = false  // Reset on new start
+
     if (!config.app_id || !config.app_secret) {
       throw new Error('Feishu app_id and app_secret are required')
     }
@@ -92,6 +96,7 @@ export class FeishuAdapter extends ChannelAdapter {
 
   async stop(): Promise<void> {
     this.running = false
+    this.stopped = true  // Prevent orphaned WSClient from delivering events
 
     // Close WebSocket connection using SDK's close() method
     if (this.wsClient) {
@@ -388,6 +393,11 @@ export class FeishuAdapter extends ChannelAdapter {
   // ---------------------------------------------------------------------------
 
   private async handleIncomingMessage(data: unknown): Promise<void> {
+    // Guard: discard events from orphaned WSClient after stop()
+    if (this.stopped) {
+      console.log('[Feishu] Discarding event from stopped adapter')
+      return
+    }
     this.lastEventTime = Date.now()
     try {
       const event = data as {

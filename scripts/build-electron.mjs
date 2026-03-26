@@ -185,7 +185,7 @@ function cleanForgeData(standaloneDir) {
 // Step 6: Download and bundle Node.js runtime for the packaged app.
 // Eliminates dependency on user having a specific Node.js version installed.
 async function bundleNodeRuntime() {
-  const NODE_VERSION = '22.22.2'
+  const NODE_VERSION = '24.14.0'
   const arch = process.arch  // arm64 or x64
   const isWin = process.platform === 'win32'
   const platform = process.platform === 'darwin' ? 'darwin' : isWin ? 'win' : 'linux'
