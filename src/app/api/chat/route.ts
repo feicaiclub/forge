@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   // Reconstruct serverPath from filename (never trust absolute paths from client)
   const uploadsDir = getUploadsDir()
   const attachments: ForgeAttachment[] = (body.attachments || []).map(a => {
-    const safeFilename = a.filename.replace(/[/\\..]/g, '_') // sanitize
+    const safeFilename = a.filename.replace(/\.\./g, '').replace(/[/\\]/g, '_') // sanitize: strip path traversal + slashes, preserve dots in extensions
     return {
       name: a.name,
       serverPath: path.join(uploadsDir, safeFilename),
