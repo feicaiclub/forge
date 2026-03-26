@@ -89,40 +89,69 @@ function copyTemplates(standaloneDir) {
 // pnpm uses a strict node_modules layout where dependencies are nested in .pnpm/.
 // Node.js require() can't resolve them from the top-level. Scan .pnpm/ and create
 // top-level copies for any packages that aren't already hoisted.
+// Runs multiple passes to catch transitive dependencies (e.g. protobufjs → @protobufjs/*).
 function fixPnpmHoisting(standaloneDir) {
   const nodeModules = join(standaloneDir, 'node_modules')
   const pnpmDir = join(nodeModules, '.pnpm')
   if (!existsSync(pnpmDir)) return
 
-  let fixed = 0
-  const pnpmEntries = readdirSync(pnpmDir)
+  let totalFixed = 0
+  // Multiple passes: each pass may hoist packages whose sub-deps need hoisting next pass
+  for (let pass = 0; pass < 5; pass++) {
+    let fixed = 0
+    const pnpmEntries = readdirSync(pnpmDir)
 
-  for (const entry of pnpmEntries) {
-    const entryModules = join(pnpmDir, entry, 'node_modules')
-    if (!existsSync(entryModules)) continue
+    for (const entry of pnpmEntries) {
+      const entryModules = join(pnpmDir, entry, 'node_modules')
+      if (!existsSync(entryModules)) continue
 
-    let pkgs
-    try { pkgs = readdirSync(entryModules) } catch { continue }
+      let pkgs
+      try { pkgs = readdirSync(entryModules) } catch { continue }
 
-    for (const pkg of pkgs) {
-      // Skip .pnpm internal references and already-hoisted packages
-      if (pkg === '.pnpm' || pkg === 'node_modules') continue
+      for (const pkg of pkgs) {
+        // Skip .pnpm internal references and already-hoisted packages
+        if (pkg === '.pnpm' || pkg === 'node_modules') continue
 
-      const topLevel = join(nodeModules, pkg)
-      if (existsSync(topLevel)) continue  // Already hoisted
-
-      const source = join(entryModules, pkg)
-      try {
-        const stat = lstatSync(source)
-        if (stat.isDirectory()) {
-          cpSync(source, topLevel, { recursive: true })
-          fixed++
+        // Handle scoped packages (@scope/name): check inside the scope dir
+        if (pkg.startsWith('@')) {
+          const scopeDir = join(entryModules, pkg)
+          let scopedPkgs
+          try { scopedPkgs = readdirSync(scopeDir) } catch { continue }
+          for (const scopedPkg of scopedPkgs) {
+            const topLevel = join(nodeModules, pkg, scopedPkg)
+            if (existsSync(topLevel)) continue
+            const source = join(scopeDir, scopedPkg)
+            try {
+              const stat = lstatSync(source)
+              if (stat.isDirectory()) {
+                mkdirSync(join(nodeModules, pkg), { recursive: true })
+                cpSync(source, topLevel, { recursive: true })
+                fixed++
+              }
+            } catch { /* skip */ }
+          }
+          continue
         }
-      } catch { /* skip */ }
+
+        const topLevel = join(nodeModules, pkg)
+        if (existsSync(topLevel)) continue  // Already hoisted
+
+        const source = join(entryModules, pkg)
+        try {
+          const stat = lstatSync(source)
+          if (stat.isDirectory()) {
+            cpSync(source, topLevel, { recursive: true })
+            fixed++
+          }
+        } catch { /* skip */ }
+      }
     }
+
+    totalFixed += fixed
+    if (fixed === 0) break  // No more gaps found
   }
 
-  if (fixed > 0) console.log(`✅ Fixed ${fixed} pnpm hoisting gap(s)`)
+  if (totalFixed > 0) console.log(`✅ Fixed ${totalFixed} pnpm hoisting gap(s)`)
 }
 
 // Step 4: Strip developer machine paths from standalone build output.
@@ -306,6 +335,49 @@ function rebuildNativeModules() {
   }
 }
 
+// Step 3c: Ensure serverExternalPackages have all transitive dependencies.
+// When Next.js externalizes a package, it lands in standalone/node_modules but
+// its transitive deps may be missing (they weren't traced by webpack).
+// Copy any missing deps from the project's node_modules.
+function ensureExternalDeps(standaloneDir) {
+  const standaloneNM = join(standaloneDir, 'node_modules')
+  const projectNM = join(process.cwd(), 'node_modules')
+  let copied = 0
+
+  function ensurePkg(pkgName, depth = 0) {
+    if (depth > 5) return
+    const dest = join(standaloneNM, pkgName)
+    const src = join(projectNM, pkgName)
+
+    // Copy if missing in standalone but exists in project
+    if (!existsSync(dest) && existsSync(src)) {
+      try {
+        const parentDir = join(dest, '..')
+        mkdirSync(parentDir, { recursive: true })
+        cpSync(src, dest, { recursive: true })
+        copied++
+      } catch { return }
+    }
+
+    // Recurse into this package's dependencies
+    const pkgJsonPath = join(dest, 'package.json')
+    try {
+      const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+      for (const dep of Object.keys(pkg.dependencies || {})) {
+        ensurePkg(dep, depth + 1)
+      }
+    } catch { /* skip */ }
+  }
+
+  // Start from known external packages that have runtime deps
+  const externals = ['@larksuiteoapi/node-sdk']
+  for (const ext of externals) {
+    ensurePkg(ext)
+  }
+
+  if (copied > 0) console.log(`✅ Copied ${copied} missing transitive dep(s) for external packages`)
+}
+
 // Main
 await buildElectron()
 await bundleNodeRuntime()
@@ -316,6 +388,8 @@ try {
   lstatSync(standaloneDir)
   resolveSymlinks(standaloneDir)
   fixPnpmHoisting(standaloneDir)
+  ensureExternalDeps(standaloneDir)
+  resolveSymlinks(standaloneDir)  // Second pass: resolve symlinks introduced by ensureExternalDeps
   cleanForgeData(standaloneDir)
   copyTemplates(standaloneDir)
   stripDevPaths(standaloneDir)
