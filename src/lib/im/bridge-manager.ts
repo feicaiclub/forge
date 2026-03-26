@@ -460,8 +460,8 @@ class BridgeManager {
                 await this.delivery.deliver(adapter, msg.chatId, '', { deleteMessageId: draftMsgId })
               }
             } else {
-              // Send final message directly
-              await this.delivery.deliver(adapter, msg.chatId, text)
+              // Send final message directly (skipDedup: legitimate responses should never be suppressed)
+              await this.delivery.deliver(adapter, msg.chatId, text, { skipDedup: true })
             }
           },
 

@@ -32,8 +32,9 @@ export class FeishuAdapter extends ChannelAdapter {
   private messageQueue: IncomingMessage[] = []
   private messageWaiter: ((msg: IncomingMessage | null) => void) | null = null
 
-  // Track last event time for connection health logging
+  // Connection health: only reconnect after genuinely long silence (5 min)
   private lastEventTime = 0
+  private static readonly CONNECTION_DEAD_MS = 300_000  // 5 minutes — truly dead, not just idle
 
   // Permission response callback
   private permissionCallback: ((requestId: string, decision: 'allow' | 'deny') => void) | null = null
@@ -149,19 +150,30 @@ export class FeishuAdapter extends ChannelAdapter {
         this.messageWaiter = null
       }
 
-      // No watchdog timeout — just wait for a message or abort signal.
-      // The WebSocket SDK handles its own connection health (ping/pong).
-      // Previous watchdog incorrectly treated normal idle periods as disconnects,
-      // causing forced reconnections that broke working connections.
+      // Connection health check: only after 5 minutes of zero events.
+      // This catches genuinely dead WebSocket connections (TCP drop without close frame).
+      // Normal idle periods (user not chatting) do NOT trigger reconnection.
+      const healthCheck = setInterval(() => {
+        const sinceLastEvent = Date.now() - this.lastEventTime
+        if (this.lastEventTime > 0 && sinceLastEvent >= FeishuAdapter.CONNECTION_DEAD_MS) {
+          console.warn(`[Feishu] No events for ${Math.round(sinceLastEvent / 1000)}s — connection likely dead`)
+          this.running = false
+          clearInterval(healthCheck)
+          cleanup()
+          resolve(null)
+        }
+      }, 60_000)  // Check every 60 seconds
 
       // IMPORTANT: set messageWaiter BEFORE addEventListener to prevent dangling waiter
       this.messageWaiter = (msg) => {
         signal.removeEventListener('abort', onAbort)
+        clearInterval(healthCheck)
         cleanup()
         resolve(msg)
       }
 
       const onAbort = () => {
+        clearInterval(healthCheck)
         cleanup()
         resolve(null)
       }
@@ -278,6 +290,13 @@ export class FeishuAdapter extends ChannelAdapter {
     }
     // Track this request for simplified responses (P30: also track senderId for verification)
     this.pendingPermByChat.set(req.chatId, { requestIdPrefix: req.requestId.slice(0, 8), senderId: req.senderId })
+    // Auto-cleanup after 120s to prevent stale entries from swallowing normal messages
+    setTimeout(() => {
+      const current = this.pendingPermByChat.get(req.chatId)
+      if (current?.requestIdPrefix === req.requestId.slice(0, 8)) {
+        this.pendingPermByChat.delete(req.chatId)
+      }
+    }, 120_000)
 
     const text = `🔐 需要你的授权\n\nForge 想要使用 ${req.toolName}：\n${inputSummary}\n\n回复"允许"或"拒绝"`
 
