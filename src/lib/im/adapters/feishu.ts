@@ -76,11 +76,9 @@ export class FeishuAdapter extends ChannelAdapter {
     await this.fetchBotInfo()
 
     // Create event dispatcher
-    // IMPORTANT: await handleIncomingMessage so the SDK sends ack AFTER processing.
-    // Without await, the SDK acks with empty response; Feishu server may redeliver.
     const dispatcher = new Lark.EventDispatcher({}).register({
       'im.message.receive_v1': async (data) => {
-        await this.handleIncomingMessage(data)
+        this.handleIncomingMessage(data)
       },
     })
 
