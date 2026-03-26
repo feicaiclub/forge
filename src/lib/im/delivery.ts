@@ -116,17 +116,21 @@ export class DeliveryLayer {
 
     // Edit existing message (for streaming draft)
     if (options?.editMessageId) {
-      const editResult = await this.retryWithBackoff(async () => {
-        return adapter.send({
+      try {
+        console.log(`[Delivery] editing message ${options.editMessageId}...`)
+        const editResult = await adapter.send({
           chatId,
           text: rendered,
           editMessageId: options.editMessageId,
           parseMode: 'markdown',
         })
-      })
-
-      this.logAudit('edit', channelType, chatId, { messageId: options.editMessageId })
-      return editResult
+        console.log(`[Delivery] edit done, result=${editResult}`)
+        this.logAudit('edit', channelType, chatId, { messageId: options.editMessageId })
+        return editResult
+      } catch (err) {
+        console.error(`[Delivery] edit FAILED:`, err instanceof Error ? err.message : err)
+        // Edit failed — send as new message instead of silently failing
+      }
     }
 
     // Chunk message for platform limits
