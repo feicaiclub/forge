@@ -860,8 +860,10 @@ function handleMode(cmd: ImCommand): string {
     return t('modeInvalid')
   }
 
-  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('im_permission_mode', ?)")
-    .run(newMode)
+  // Sync both IM and desktop permission modes (user expects unified behavior)
+  const upsert = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+  upsert.run('im_permission_mode', newMode)
+  upsert.run('desktop_permission_mode', newMode)
 
   return `${t('modeSwitched')}: ${newMode}`
 }

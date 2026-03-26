@@ -365,7 +365,7 @@ function PermissionsSection({ get, handleSettingChange, t }: SectionProps) {
         <SettingRow label={_('settings.desktopPermission')} description={_('settings.desktopPermissionDesc')}>
           <Select
             value={get('desktop_permission_mode', 'confirm')}
-            onChange={(v) => handleSettingChange('desktop_permission_mode', v)}
+            onChange={(v) => { handleSettingChange('desktop_permission_mode', v); handleSettingChange('im_permission_mode', v) }}
             options={[
               { value: 'confirm', label: _('permission.confirmMode') },
               { value: 'full', label: _('permission.fullAccess') },
