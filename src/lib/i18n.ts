@@ -393,11 +393,16 @@ const translations: Record<Locale, Record<string, string>> = {
     'button.createTask': '创建任务',
 
     // Schedule frequency options
+    'schedule.frequency.once': '一次性',
     'schedule.frequency.minutes': '每 X 分钟',
     'schedule.frequency.hourly': '每小时',
     'schedule.frequency.daily': '每天',
     'schedule.frequency.weekly': '每周',
     'schedule.frequency.monthly': '每月',
+    'schedule.once': '一次性',
+    'schedule.noAgents': '暂无可用 Agent',
+    'schedule.noAgentsHint': '在 Manage → Agents 中创建 Agent。\n留空则由主 Agent 执行。',
+    'form.optional': '可选',
 
     // Schedule action types
     'schedule.actionType.runAgent': '运行 Agent',
@@ -913,11 +918,16 @@ const translations: Record<Locale, Record<string, string>> = {
     'button.createTask': 'Create Task',
 
     // Schedule frequency options
+    'schedule.frequency.once': 'Once',
     'schedule.frequency.minutes': 'Every X minutes',
     'schedule.frequency.hourly': 'Every hour',
     'schedule.frequency.daily': 'Every day',
     'schedule.frequency.weekly': 'Every week',
     'schedule.frequency.monthly': 'Every month',
+    'schedule.once': 'Once',
+    'schedule.noAgents': 'No agents available',
+    'schedule.noAgentsHint': 'Create agents in Manage → Agents.\nLeave empty to use the main agent.',
+    'form.optional': 'optional',
 
     // Schedule action types
     'schedule.actionType.runAgent': 'Run Agent',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Plus, Heart, Clock, Play, Trash2, X, Power, ExternalLink, Pencil } from 'lucide-react'
 import { CustomSelect, type SelectOption } from '@/components/ui/custom-select'
 import { cn } from '@/lib/utils'
@@ -10,20 +10,27 @@ import { useTaskExecutions } from '@/hooks/use-task-executions'
 import type { CronTask, TaskActionType } from '@/lib/types'
 
 /* ─── Frequency → Cron helpers ─── */
-type FreqUnit = 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly'
+type FreqUnit = 'once' | 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly'
 
 interface VisualSchedule {
   unit: FreqUnit
   interval: number // e.g. 5, 15, 30 for "minutes"
-  time: string     // HH:MM for daily/weekly/monthly
+  time: string     // HH:MM for daily/weekly/monthly/once
   dayOfWeek: number // 0-6 for weekly (0=Sun)
   dayOfMonth: number // 1-31 for monthly
+  onceDate: string // YYYY-MM-DD for once
 }
 
-const DEFAULT_SCHEDULE: VisualSchedule = { unit: 'daily', interval: 30, time: '09:00', dayOfWeek: 1, dayOfMonth: 1 }
+const DEFAULT_SCHEDULE: VisualSchedule = { unit: 'daily', interval: 30, time: '09:00', dayOfWeek: 1, dayOfMonth: 1, onceDate: new Date().toISOString().slice(0, 10) }
 
 function scheduleToCron(s: VisualSchedule): string {
   switch (s.unit) {
+    case 'once': {
+      // Store as a specific date+time cron. The engine will disable the task after execution.
+      const [h, m] = s.time.split(':').map(Number)
+      const d = new Date(s.onceDate)
+      return `${m || 0} ${h || 9} ${d.getDate()} ${d.getMonth() + 1} *`
+    }
     case 'minutes': return `*/${s.interval} * * * *`
     case 'hourly': return '0 * * * *'
     case 'daily': {
@@ -46,7 +53,7 @@ function cronToHumanLabel(cron: string, t: (key: string) => string): string {
   const parts = cron.split(/\s+/)
   if (parts.length !== 5) return cron
 
-  const [min, hour, dom, , dow] = parts
+  const [min, hour, dom, month, dow] = parts
 
   if (min.startsWith('*/')) return t('schedule.everyNMin').replace('{n}', min.slice(2))
   if (hour === '*' && min === '0') return t('schedule.everyHour')
@@ -56,6 +63,8 @@ function cronToHumanLabel(cron: string, t: (key: string) => string): string {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     return `${days[Number(dow)] || dow} ${hh}:${mm}`
   }
+  // Once: specific day+month (dom and month are not *)
+  if (dom !== '*' && month !== '*') return `${t('schedule.once')} ${month}/${dom} ${hh}:${mm}`
   if (dom !== '*') return t('schedule.day').replace('{dom}', dom).replace('{time}', `${hh}:${mm}`)
   return t('schedule.everyDay').replace('{time}', `${hh}:${mm}`)
 }
@@ -63,6 +72,84 @@ function cronToHumanLabel(cron: string, t: (key: string) => string): string {
 const MINUTE_OPTIONS: SelectOption[] = [5, 10, 15, 20, 30, 45].map(n => ({ value: String(n), label: `${n} min` }))
 const DOW_OPTIONS: SelectOption[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => ({ value: String(i), label: d }))
 const DOM_OPTIONS: SelectOption[] = Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
+
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
+
+/* ─── Custom Time Picker ─── */
+function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const [hh, mm] = value.split(':')
+  const hourRef = useRef<HTMLDivElement>(null)
+  const minRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Scroll selected items into view when dropdown opens
+  useEffect(() => {
+    if (!open) return
+    setTimeout(() => {
+      hourRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'center' })
+      minRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'center' })
+    }, 0)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative w-[120px]">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          'w-full h-10 px-3 rounded-lg bg-elevated border text-[14px] text-primary flex items-center justify-between',
+          open ? 'border-indigo' : 'border-subtle'
+        )}
+      >
+        <span>{value}</span>
+        <Clock size={16} className="text-muted" />
+      </button>
+      {open && (
+        <div className="absolute top-[calc(100%+4px)] left-0 w-[120px] rounded-lg bg-elevated border border-subtle z-50 flex overflow-hidden shadow-lg">
+          <div ref={hourRef} className="flex-1 max-h-[180px] overflow-y-auto scrollbar-thin">
+            {HOURS.map(h => (
+              <button
+                key={h}
+                type="button"
+                data-selected={h === hh}
+                onClick={() => { onChange(`${h}:${mm}`); }}
+                className={cn(
+                  'w-full h-8 text-[13px] flex items-center justify-center',
+                  h === hh ? 'bg-indigo text-white font-semibold' : 'text-muted hover:bg-surface-hover hover:text-secondary'
+                )}
+              >{h}</button>
+            ))}
+          </div>
+          <div className="w-px bg-subtle" />
+          <div ref={minRef} className="flex-1 max-h-[180px] overflow-y-auto scrollbar-thin">
+            {MINUTES.map(m => (
+              <button
+                key={m}
+                type="button"
+                data-selected={m === mm}
+                onClick={() => { onChange(`${hh}:${m}`); }}
+                className={cn(
+                  'w-full h-8 text-[13px] flex items-center justify-center',
+                  m === mm ? 'bg-indigo text-white font-semibold' : 'text-muted hover:bg-surface-hover hover:text-secondary'
+                )}
+              >{m}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ─── Main component ─── */
 
@@ -547,6 +634,7 @@ function TaskFormModal({ mode, workspaceId, task, onSubmit, onClose }: {
   const [skills, setSkills] = useState<SelectOption[]>([])
 
   const FREQ_OPTIONS: SelectOption[] = [
+    { value: 'once', label: t('schedule.frequency.once') },
     { value: 'minutes', label: t('schedule.frequency.minutes') },
     { value: 'hourly', label: t('schedule.frequency.hourly') },
     { value: 'daily', label: t('schedule.frequency.daily') },
@@ -665,12 +753,18 @@ function TaskFormModal({ mode, workspaceId, task, onSubmit, onClose }: {
                   />
                 </div>
               )}
-              {(schedule.unit === 'daily' || schedule.unit === 'weekly' || schedule.unit === 'monthly') && (
+              {schedule.unit === 'once' && (
                 <input
-                  type="time"
+                  type="date"
+                  value={schedule.onceDate}
+                  onChange={(e) => setSchedule(s => ({ ...s, onceDate: e.target.value }))}
+                  className="w-[140px] h-10 px-3 rounded-lg bg-elevated border border-subtle text-[14px] text-primary outline-none focus:border-indigo [color-scheme:dark]"
+                />
+              )}
+              {(schedule.unit === 'once' || schedule.unit === 'daily' || schedule.unit === 'weekly' || schedule.unit === 'monthly') && (
+                <TimePicker
                   value={schedule.time}
-                  onChange={(e) => setSchedule(s => ({ ...s, time: e.target.value }))}
-                  className="w-[120px] h-10 px-3 rounded-lg bg-elevated border border-subtle text-[14px] text-primary outline-none focus:border-indigo"
+                  onChange={(v) => setSchedule(s => ({ ...s, time: v }))}
                 />
               )}
               {schedule.unit === 'weekly' && (
@@ -707,17 +801,26 @@ function TaskFormModal({ mode, workspaceId, task, onSubmit, onClose }: {
             />
           </div>
 
-          {/* Agent selector (conditional) */}
+          {/* Agent selector (conditional, optional) */}
           {actionType === 'run-agent' && (
             <div>
-              <label className="block text-[13px] text-secondary mb-1.5 font-medium">{t('form.agent')}</label>
-              <CustomSelect
-                value={agentName}
-                onChange={setAgentName}
-                options={agents}
-                placeholder={t('input.selectAgent')}
-                size="md"
-              />
+              <label className="block text-[13px] text-secondary mb-1.5 font-medium">
+                {t('form.agent')} <span className="text-muted font-normal text-[12px]">({t('form.optional')})</span>
+              </label>
+              {agents.length > 0 ? (
+                <CustomSelect
+                  value={agentName}
+                  onChange={setAgentName}
+                  options={agents}
+                  placeholder={t('input.selectAgent')}
+                  size="md"
+                />
+              ) : (
+                <div className="w-full rounded-lg bg-elevated border border-subtle px-3 py-4 flex flex-col items-center gap-2">
+                  <div className="text-muted text-[13px]">{t('schedule.noAgents')}</div>
+                  <div className="text-muted text-[11px] text-center leading-relaxed">{t('schedule.noAgentsHint')}</div>
+                </div>
+              )}
             </div>
           )}
 

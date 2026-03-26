@@ -81,6 +81,13 @@ class CronEngine {
         "UPDATE cron_tasks SET last_run_at = ?, last_run_result = ?, updated_at = datetime('now') WHERE id = ?",
       ).run(startTime, result.slice(0, 200), task.id)
 
+      // Auto-disable "once" tasks (specific day+month in cron = one-time task)
+      const cronParts = task.schedule.split(/\s+/)
+      if (cronParts.length === 5 && cronParts[2] !== '*' && cronParts[3] !== '*') {
+        db.prepare("UPDATE cron_tasks SET enabled = 0, updated_at = datetime('now') WHERE id = ?").run(task.id)
+        console.log(`[CronEngine] One-time task ${task.name} auto-disabled after execution`)
+      }
+
       console.log(`[CronEngine] Task ${task.name}: ${status} — ${result.slice(0, 80)}`)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error'
