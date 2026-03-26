@@ -444,7 +444,7 @@ export class FeishuAdapter extends ChannelAdapter {
             const imageData = await this.downloadFeishuResource(msgId, content.image_key, 'image')
             const isGroupMention = !isDm || true // Images in DM always processed
             const incoming: IncomingMessage = {
-              channelType: 'feishu', channelId: 'feishu', chatId, senderId, senderName: 'User',
+              channelType: 'feishu', channelId: 'feishu', chatId, messageId: msgId, senderId, senderName: 'User',
               text: '', isDm, isGroupMention: !isDm ? this.isBotMentioned(message.mentions) || true : false,
               images: [{ data: imageData.toString('base64'), mimeType: 'image/png', name: 'image.png' }],
             }
@@ -464,7 +464,7 @@ export class FeishuAdapter extends ChannelAdapter {
           if (content.file_key && msgId) {
             const fileData = await this.downloadFeishuResource(msgId, content.file_key, 'file')
             const incoming: IncomingMessage = {
-              channelType: 'feishu', channelId: 'feishu', chatId, senderId, senderName: 'User',
+              channelType: 'feishu', channelId: 'feishu', chatId, messageId: msgId, senderId, senderName: 'User',
               text: '', isDm, isGroupMention: !isDm ? true : false,
               files: [{ data: fileData, name: content.file_name || 'file', mimeType: 'application/octet-stream', size: fileData.length }],
             }
