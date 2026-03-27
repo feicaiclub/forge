@@ -283,21 +283,32 @@ export class ConversationEngine {
     }
 
     // Final text: prefer the authoritative assistant text, fall back to streaming
-    const finalText = responseText || streamingText
+    const rawFinalText = responseText || streamingText
 
-    // Send final text
+    // Parse MEDIA: protocol lines from response text
+    const { text: finalText, mediaPaths } = parseMediaProtocol(rawFinalText)
+
+    // Send final text (with MEDIA: lines stripped)
     if (finalText) {
       try { await callbacks.onFinal(finalText) } catch (err) { console.warn('[ConversationEngine] onFinal error:', err instanceof Error ? err.message : err) }
     }
 
-    // Detect file/image attachments from tool use and send via onAttachments
+    // Collect attachments from two sources:
+    // 1. MEDIA: protocol lines (explicit, preferred)
+    // 2. Tool use heuristics (fallback for auto-detection)
+    const mediaAttachments = resolveFileAttachments(mediaPaths)
     const fileHintBlocks = fileHints.map(h => ({ type: 'tool_use' as const, name: h.tool, input: h.input }))
-    const attachments = resolveFileAttachments(extractFilePaths(fileHintBlocks as Record<string, unknown>[]))
-    if (attachments.length > 0 && callbacks.onAttachments) {
-      try { await callbacks.onAttachments(attachments) } catch (err) { console.warn('[ConversationEngine] onAttachments error:', err instanceof Error ? err.message : err) }
+    const heuristicAttachments = resolveFileAttachments(extractFilePaths(fileHintBlocks as Record<string, unknown>[]))
+
+    // Merge, deduplicate by filePath
+    const seenPaths = new Set(mediaAttachments.map(a => a.filePath))
+    const allAttachments = [...mediaAttachments, ...heuristicAttachments.filter(a => !seenPaths.has(a.filePath))]
+
+    if (allAttachments.length > 0 && callbacks.onAttachments) {
+      try { await callbacks.onAttachments(allAttachments) } catch (err) { console.warn('[ConversationEngine] onAttachments error:', err instanceof Error ? err.message : err) }
     }
 
-    return { text: finalText, toolsUsed, blocks: allBlocks, attachments }
+    return { text: finalText, toolsUsed, blocks: allBlocks, attachments: allAttachments }
   }
 
   // ---------------------------------------------------------------------------
@@ -341,6 +352,27 @@ export class ConversationEngine {
 // ---------------------------------------------------------------------------
 // Attachment detection — shared by ConversationEngine (IM) and chat route (desktop)
 // ---------------------------------------------------------------------------
+
+/**
+ * Parse MEDIA: protocol lines from Agent response text.
+ * Returns cleaned text (MEDIA: lines stripped) and extracted file paths.
+ */
+export function parseMediaProtocol(text: string): { text: string; mediaPaths: string[] } {
+  const mediaPaths: string[] = []
+  const cleanedLines: string[] = []
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('MEDIA:')) {
+      const filePath = trimmed.slice(6).trim()
+      if (filePath) mediaPaths.push(filePath)
+    } else {
+      cleanedLines.push(line)
+    }
+  }
+  // Remove trailing empty lines left by stripping MEDIA: lines
+  const cleaned = cleanedLines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  return { text: cleaned, mediaPaths }
+}
 
 /** Extract file paths from tool_use blocks (Write, Bash curl/wget/cp/mv, Read) */
 export function extractFilePaths(blocks: Record<string, unknown>[]): string[] {

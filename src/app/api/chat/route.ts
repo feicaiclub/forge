@@ -11,7 +11,7 @@ import { createPermissionBridge, cleanupStaleSessionAllowances } from '@/lib/sdk
 import { archiveOldMemories } from '@/lib/workspace-fs'
 import { resolveProvider } from '@/lib/provider'
 import { runSessionCleanup } from '@/lib/session-cleanup'
-import { extractFilePaths, resolveFileAttachments } from '@/lib/im/conversation-engine'
+import { extractFilePaths, resolveFileAttachments, parseMediaProtocol } from '@/lib/im/conversation-engine'
 import type { Query } from '@anthropic-ai/claude-agent-sdk'
 
 export const runtime = 'nodejs'
@@ -236,9 +236,28 @@ export async function POST(req: Request) {
         await drainQuery(retryQ, mapper, emit)
       }
 
-      // Detect file/image attachments created by Agent and append as content blocks
+      // Detect file/image attachments from two sources:
+      // 1. MEDIA: protocol lines in text blocks (explicit, preferred)
+      // 2. Tool use heuristics (fallback)
       const blocks = mapper.getBlocks()
-      const detectedFiles = resolveFileAttachments(extractFilePaths(blocks as Record<string, unknown>[]))
+
+      // Parse MEDIA: lines from text blocks and strip them from displayed text
+      const mediaPaths: string[] = []
+      for (const block of blocks) {
+        if ((block as Record<string, unknown>).type === 'text') {
+          const b = block as { type: string; text: string }
+          const parsed = parseMediaProtocol(b.text)
+          mediaPaths.push(...parsed.mediaPaths)
+          b.text = parsed.text // Strip MEDIA: lines from stored text
+        }
+      }
+
+      // Merge MEDIA: paths with heuristic-detected paths, dedup
+      const mediaAttachments = resolveFileAttachments(mediaPaths)
+      const heuristicAttachments = resolveFileAttachments(extractFilePaths(blocks as Record<string, unknown>[]))
+      const seenPaths = new Set(mediaAttachments.map(a => a.filePath))
+      const detectedFiles = [...mediaAttachments, ...heuristicAttachments.filter(a => !seenPaths.has(a.filePath))]
+
       const uploadsDir = getUploadsDir()
       for (const att of detectedFiles) {
         try {
