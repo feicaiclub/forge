@@ -317,8 +317,9 @@ export class ConversationEngine {
         } else if (block.type === 'tool_use') {
           allBlocks.push({ type: 'tool_use', id: block.id, name: block.name, input: block.input })
           toolsUsed.push(block.name)
-          // Track file-creating tools for attachment detection
-          if (['Write', 'Bash'].includes(block.name)) {
+          // Track file-producing tools for attachment detection
+          // Read is included because "send me this file" requests involve reading existing files
+          if (['Write', 'Bash', 'Read'].includes(block.name)) {
             fileHints.push({ tool: block.name, input: block.input as Record<string, unknown> })
           }
         }
@@ -341,7 +342,7 @@ export class ConversationEngine {
 // Attachment detection — shared by ConversationEngine (IM) and chat route (desktop)
 // ---------------------------------------------------------------------------
 
-/** Extract file paths from tool_use blocks (Write file_path, Bash curl -o / wget -O) */
+/** Extract file paths from tool_use blocks (Write, Bash curl/wget/cp/mv, Read) */
 export function extractFilePaths(blocks: Record<string, unknown>[]): string[] {
   const paths = new Set<string>()
   for (const block of blocks) {
@@ -351,11 +352,17 @@ export function extractFilePaths(blocks: Record<string, unknown>[]): string[] {
     if (name === 'Write') {
       const fp = String(input.file_path || input.path || '')
       if (fp) paths.add(fp)
+    } else if (name === 'Read') {
+      // Agent reading an existing file — potential "send this file" intent
+      const fp = String(input.file_path || input.path || '')
+      if (fp) paths.add(fp)
     } else if (name === 'Bash') {
       const cmd = String(input.command || '')
       const patterns = [
         /curl\s+.*?-o\s+["']?(\S+?)["']?(?:\s|$)/g,
         /wget\s+.*?-O\s+["']?(\S+?)["']?(?:\s|$)/g,
+        /\bcp\s+\S+\s+["']?(\S+?)["']?\s*$/gm,
+        /\bmv\s+\S+\s+["']?(\S+?)["']?\s*$/gm,
       ]
       for (const pattern of patterns) {
         let match
@@ -369,16 +376,26 @@ export function extractFilePaths(blocks: Record<string, unknown>[]): string[] {
 }
 
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'])
-const SKIP_EXTS = new Set(['.ts', '.js', '.py', '.go', '.rs', '.java', '.cpp', '.h',
-  '.json', '.yaml', '.yml', '.toml', '.xml', '.md', '.txt', '.csv', '.sh', '.sql',
-  '.html', '.css', '.scss', '.lock', '.log', '.env', '.gitignore'])
+// Only skip source code, config, and build files — allow documents (.pdf, .doc, .ppt, .xls),
+// text (.md, .txt, .csv), images, and archives
+const SKIP_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.h',
+  '.rb', '.php', '.swift', '.kt', '.scala', '.lua', '.pl', '.zig',
+  '.json', '.yaml', '.yml', '.toml', '.xml', '.html', '.css', '.scss',
+  '.lock', '.log', '.env', '.gitignore', '.map', '.d.ts', '.sh', '.sql'])
 const MIME_MAP: Record<string, string> = {
+  // Images
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
-  '.pdf': 'application/pdf', '.zip': 'application/zip',
+  // Documents
+  '.pdf': 'application/pdf',
   '.doc': 'application/msword', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.xls': 'application/vnd.ms-excel', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.ppt': 'application/vnd.ms-powerpoint', '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  // Text & data
+  '.txt': 'text/plain', '.md': 'text/markdown', '.csv': 'text/csv',
+  '.json': 'application/json', '.html': 'text/html',
+  // Archives
+  '.zip': 'application/zip', '.tar': 'application/x-tar', '.gz': 'application/gzip',
 }
 
 /** Resolve file paths to OutboundAttachment objects. Skips source code, empty, and >20MB files. */
