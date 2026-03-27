@@ -7,30 +7,31 @@ export type CommandCategory = 'built-in' | 'skill' | 'agent' | 'mcp'
 export interface SlashCommand {
   /** Command name without the leading `/` */
   name: string
-  /** Short description shown in autocomplete */
+  /** i18n key for the description, or a literal string for dynamic commands */
   description: string
   /** Category for grouping in the menu */
   category: CommandCategory
   /** Whether the command accepts an argument (e.g. /rename <title>) */
   hasArg?: boolean
-  /** Placeholder text for the argument */
+  /** i18n key for the argument placeholder */
   argPlaceholder?: string
 }
 
-/** Built-in commands that Forge provides out of the box */
+/** Built-in commands that Forge provides out of the box.
+ *  Descriptions are i18n keys — resolve with t() at render time. */
 export const BUILT_IN_COMMANDS: SlashCommand[] = [
-  { name: 'clear', description: 'Clear all messages in this session', category: 'built-in' },
-  { name: 'compact', description: 'Compact conversation to save context', category: 'built-in' },
-  { name: 'cost', description: 'Show token usage for this session', category: 'built-in' },
-  { name: 'diff', description: 'Show git diff for current workspace', category: 'built-in' },
-  { name: 'export', description: 'Export session as Markdown', category: 'built-in' },
-  { name: 'init', description: 'Initialize workspace config files (CLAUDE.md, SOUL.md, etc.)', category: 'built-in' },
-  { name: 'memory', description: 'Open MEMORY.md for current workspace', category: 'built-in' },
-  { name: 'model', description: 'Switch model', category: 'built-in', hasArg: true, argPlaceholder: 'model name' },
-  { name: 'rename', description: 'Rename current session', category: 'built-in', hasArg: true, argPlaceholder: 'new title' },
-  { name: 'save-as-template', description: 'Save .claude/ as marketplace template', category: 'built-in', hasArg: true, argPlaceholder: 'template name' },
-  { name: 'stop', description: 'Stop current response', category: 'built-in' },
-  { name: 'workspace', description: 'Switch project workspace', category: 'built-in' },
+  { name: 'clear', description: 'cmd.clear', category: 'built-in' },
+  { name: 'compact', description: 'cmd.compact', category: 'built-in' },
+  { name: 'cost', description: 'cmd.cost', category: 'built-in' },
+  { name: 'diff', description: 'cmd.diff', category: 'built-in' },
+  { name: 'export', description: 'cmd.export', category: 'built-in' },
+  { name: 'init', description: 'cmd.init', category: 'built-in' },
+  { name: 'memory', description: 'cmd.memory', category: 'built-in' },
+  { name: 'model', description: 'cmd.model', category: 'built-in', hasArg: true, argPlaceholder: 'cmd.modelArg' },
+  { name: 'rename', description: 'cmd.rename', category: 'built-in', hasArg: true, argPlaceholder: 'cmd.renameArg' },
+  { name: 'save-as-template', description: 'cmd.saveAsTemplate', category: 'built-in', hasArg: true, argPlaceholder: 'cmd.templateArg' },
+  { name: 'stop', description: 'cmd.stop', category: 'built-in' },
+  { name: 'workspace', description: 'cmd.workspace', category: 'built-in' },
 ]
 
 /**
@@ -58,10 +59,10 @@ export function filterCommands(commands: SlashCommand[], query: string): SlashCo
   return matched
 }
 
-/** Category display labels */
+/** Category display labels — i18n keys */
 export const CATEGORY_LABELS: Record<CommandCategory, string> = {
-  'built-in': 'Built-in',
-  skill: 'Skill',
-  agent: 'Agent',
-  mcp: 'MCP',
+  'built-in': 'cmd.catBuiltIn',
+  skill: 'cmd.catSkill',
+  agent: 'cmd.catAgent',
+  mcp: 'cmd.catMcp',
 }

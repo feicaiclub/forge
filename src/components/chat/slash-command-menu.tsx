@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { CATEGORY_LABELS, type SlashCommand, type CommandCategory } from '@/lib/slash-commands'
+import { useI18n } from '@/components/providers/i18n-provider'
 import { Zap, Bot, Plug, Terminal } from 'lucide-react'
 
 interface SlashCommandMenuProps {
@@ -19,6 +20,7 @@ const CATEGORY_ICONS: Record<CommandCategory, React.ElementType> = {
 }
 
 export function SlashCommandMenu({ commands, selectedIndex, onSelect }: SlashCommandMenuProps) {
+  const { t } = useI18n()
   const listRef = useRef<HTMLDivElement>(null)
   const selectedRef = useRef<HTMLButtonElement>(null)
 
@@ -48,7 +50,7 @@ export function SlashCommandMenu({ commands, selectedIndex, onSelect }: SlashCom
               {showHeader && (
                 <div className="px-3 pt-2 pb-1">
                   <span className="text-[10px] font-semibold text-muted tracking-wide uppercase">
-                    {CATEGORY_LABELS[cmd.category]}
+                    {t(CATEGORY_LABELS[cmd.category])}
                   </span>
                 </div>
               )}
@@ -65,11 +67,11 @@ export function SlashCommandMenu({ commands, selectedIndex, onSelect }: SlashCom
                   /{cmd.name}
                 </span>
                 <span className="text-[11px] text-muted flex-1 truncate">
-                  {cmd.description}
+                  {t(cmd.description)}
                 </span>
-                {cmd.hasArg && (
+                {cmd.hasArg && cmd.argPlaceholder && (
                   <span className="text-[10px] text-muted italic shrink-0">
-                    {cmd.argPlaceholder}
+                    {t(cmd.argPlaceholder)}
                   </span>
                 )}
               </button>

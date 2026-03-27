@@ -392,6 +392,27 @@ const translations: Record<Locale, Record<string, string>> = {
     // Buttons for schedule
     'button.createTask': '创建任务',
 
+    // Slash command descriptions
+    'cmd.clear': '清空当前会话的所有消息',
+    'cmd.compact': '压缩会话以节省上下文',
+    'cmd.cost': '显示当前会话 Token 用量',
+    'cmd.diff': '显示当前项目的 git diff',
+    'cmd.export': '导出会话为 Markdown',
+    'cmd.init': '初始化工作区配置（CLAUDE.md、SOUL.md 等）',
+    'cmd.memory': '打开当前工作区的 MEMORY.md',
+    'cmd.model': '切换模型',
+    'cmd.modelArg': '模型名称',
+    'cmd.rename': '重命名当前会话',
+    'cmd.renameArg': '新标题',
+    'cmd.saveAsTemplate': '将 .claude/ 保存为 Marketplace 方案',
+    'cmd.templateArg': '方案名称',
+    'cmd.stop': '停止当前响应',
+    'cmd.workspace': '切换项目工作区',
+    'cmd.catBuiltIn': '内置',
+    'cmd.catSkill': '技能',
+    'cmd.catAgent': 'Agent',
+    'cmd.catMcp': 'MCP',
+
     // Schedule frequency options
     'schedule.frequency.once': '一次性',
     'schedule.frequency.minutes': '每 X 分钟',
@@ -913,6 +934,27 @@ const translations: Record<Locale, Record<string, string>> = {
     'form.description': 'Description',
     'form.promptPlaceholder': 'Enter the prompt to send to the agent...',
     'form.descriptionPlaceholder': 'Optional description or additional instructions...',
+
+    // Slash command descriptions
+    'cmd.clear': 'Clear all messages in this session',
+    'cmd.compact': 'Compact conversation to save context',
+    'cmd.cost': 'Show token usage for this session',
+    'cmd.diff': 'Show git diff for current workspace',
+    'cmd.export': 'Export session as Markdown',
+    'cmd.init': 'Initialize workspace config files (CLAUDE.md, SOUL.md, etc.)',
+    'cmd.memory': 'Open MEMORY.md for current workspace',
+    'cmd.model': 'Switch model',
+    'cmd.modelArg': 'model name',
+    'cmd.rename': 'Rename current session',
+    'cmd.renameArg': 'new title',
+    'cmd.saveAsTemplate': 'Save .claude/ as marketplace template',
+    'cmd.templateArg': 'template name',
+    'cmd.stop': 'Stop current response',
+    'cmd.workspace': 'Switch project workspace',
+    'cmd.catBuiltIn': 'Built-in',
+    'cmd.catSkill': 'Skill',
+    'cmd.catAgent': 'Agent',
+    'cmd.catMcp': 'MCP',
 
     // Buttons for schedule
     'button.createTask': 'Create Task',
