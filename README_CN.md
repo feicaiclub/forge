@@ -26,6 +26,8 @@
 
 **记忆不会丢失。** Forge 维护丰富的结构化跨会话记忆——不仅是一个 CLAUDE.md，而是一整套体系：MEMORY.md 索引（前 200 行自动加载）、Agent 驱动的每日记忆、按领域拆分的主题文件、7 天自动归档，井井有条且永不丢失。
 
+<img width="1024" height="1024" alt="ChatGPT Image Mar 25, 2026, 09_55_27 PM" src="https://github.com/user-attachments/assets/7a040616-253c-4fb6-ae8b-b4d248127633" />
+
 ---
 
 ## 快速开始
