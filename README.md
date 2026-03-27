@@ -1,5 +1,3 @@
-# Forge
-
 **Local AI. Remote Control.** A desktop AI workstation powered by Claude Agent SDK.
 
 [![GitHub release](https://img.shields.io/github/v/release/feicaiclub/forge)](https://github.com/feicaiclub/forge/releases)
@@ -10,7 +8,7 @@
 
 [Download](#installation) | [Quick Start](#quick-start) | [Features](#core-capabilities) | [IM Bridge](#im-bridge) | [Marketplace](#marketplace)
 
-![Forge Desktop](docs/screenshots/hero.png)
+<img width="1552" height="1012" alt="Screenshot 2026-03-27 at 12 18 49" src="https://github.com/user-attachments/assets/15f637c0-e42b-439b-8c65-67222b1cc380" />
 
 ---
 
@@ -141,7 +139,7 @@ First time opening a project? Type `/init` in the chat. The Agent walks you thro
 
 Every question can be skipped — the Agent fills in sensible defaults. If `.claude/` already has config files, the Agent reads them first and only fills in what's missing.
 
-![/init Interview](docs/screenshots/init-interview.png)
+<img width="1552" height="1012" alt="Screenshot 2026-03-27 at 12 24 04" src="https://github.com/user-attachments/assets/88a2191d-be51-4784-9d10-96a0cc9419df" />
 
 ---
 
@@ -170,7 +168,7 @@ Starting a new project from a saved template:
 
 You can also build templates manually in the Marketplace editor — add files, organize folders, write Agent definitions and Skills, all from within Forge.
 
-![Marketplace](docs/screenshots/marketplace.png)
+<img width="1552" height="1012" alt="Screenshot 2026-03-27 at 12 32 59" src="https://github.com/user-attachments/assets/26d76006-e562-4ff1-8e80-5716376fcc6b" />
 
 ---
 
@@ -221,7 +219,7 @@ The bridge supports two-way media:
 - **You → Agent**: Send images for analysis, send files (PDF, code, documents) for processing
 - **Agent → You**: Agent downloads or generates files and sends them back through IM automatically
 
-![IM Bridge](docs/screenshots/im-bridge.png)
+<img width="1552" height="1012" alt="Screenshot 2026-03-27 at 12 26 21" src="https://github.com/user-attachments/assets/a82c097c-6f7c-4fc1-ad68-c5dc777e3a23" />
 
 ---
 
@@ -237,7 +235,7 @@ Create recurring tasks visually — no cron expressions needed.
 | Execution | Each run creates a new Session (viewable in chat list) |
 | Heartbeat | Periodic checks with HEARTBEAT.md checklist, silent when nothing to report |
 
-![Scheduled Tasks](docs/screenshots/schedule.png)
+<img width="1552" height="1012" alt="Screenshot 2026-03-27 at 12 29 14" src="https://github.com/user-attachments/assets/de7e1306-79a5-46a0-b946-cdaedd946021" />
 
 ---
 
