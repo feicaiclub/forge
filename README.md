@@ -1,3 +1,4 @@
+# Forge
 **Local AI. Remote Control.** A desktop AI workstation powered by Claude Agent SDK.
 
 [![GitHub release](https://img.shields.io/github/v/release/feicaiclub/forge)](https://github.com/feicaiclub/forge/releases)
