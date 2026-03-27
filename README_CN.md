@@ -10,7 +10,7 @@
 
 [下载安装](#安装) | [快速开始](#快速开始) | [功能一览](#核心功能) | [IM Bridge](#im-bridge) | [Marketplace](#marketplace)
 
-![Forge 桌面端](docs/screenshots/hero.png)
+<img width="1552" height="1012" alt="Forge 桌面端" src="https://github.com/user-attachments/assets/15f637c0-e42b-439b-8c65-67222b1cc380" />
 
 ---
 
@@ -141,7 +141,7 @@ pnpm dev
 
 每个问题都可以跳过——Agent 会填入合理的默认值。如果 `.claude/` 已有配置文件，Agent 会先读取再补充缺失的部分。
 
-![/init 对话采访](docs/screenshots/init-interview.png)
+<img width="1552" height="1012" alt="/init 对话采访" src="https://github.com/user-attachments/assets/88a2191d-be51-4784-9d10-96a0cc9419df" />
 
 ---
 
@@ -170,7 +170,7 @@ Forge 的 Marketplace 不是插件商店——是**方案库**。每个模板保
 
 你也可以在 Marketplace 编辑器中手动构建模板——添加文件、组织文件夹、编写 Agent 定义和 Skill，全部在 Forge 内完成。
 
-![Marketplace](docs/screenshots/marketplace.png)
+<img width="1552" height="1012" alt="Marketplace" src="https://github.com/user-attachments/assets/26d76006-e562-4ff1-8e80-5716376fcc6b" />
 
 ---
 
@@ -221,7 +221,7 @@ IM Bridge 支持双向多媒体：
 - **你 → Agent**：发送图片让 Agent 分析，发送文件（PDF、代码、文档）让 Agent 处理
 - **Agent → 你**：Agent 下载或生成的文件自动通过 IM 发送给你
 
-![IM Bridge](docs/screenshots/im-bridge.png)
+<img width="1552" height="1012" alt="IM Bridge" src="https://github.com/user-attachments/assets/a82c097c-6f7c-4fc1-ad68-c5dc777e3a23" />
 
 ---
 
@@ -237,7 +237,7 @@ IM Bridge 支持双向多媒体：
 | 执行 | 每次运行自动新建 Session（可在聊天列表中查看） |
 | Heartbeat | 通过 HEARTBEAT.md 检查清单定期巡查，无事静默 |
 
-![定时任务](docs/screenshots/schedule.png)
+<img width="1552" height="1012" alt="定时任务" src="https://github.com/user-attachments/assets/de7e1306-79a5-46a0-b946-cdaedd946021" />
 
 ---
 
