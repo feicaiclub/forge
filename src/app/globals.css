@@ -89,6 +89,15 @@
   animation: expandWidth 250ms ease-out;
 }
 
+/* Tool executing — subtle pulsing border glow */
+@keyframes toolPulse {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
+  50% { border-color: rgba(99, 102, 241, 0.6); }
+}
+.tool-executing {
+  animation: toolPulse 2s ease-in-out infinite;
+}
+
 /* Sidebar panel width transition — disabled during drag resize for instant feedback */
 .sidebar-transition {
   transition: width 200ms ease-in-out;

@@ -1230,12 +1230,18 @@ function ToolUseBlock({ name, input, hasResult, isResultError, resultContent, ra
   const [expanded, setExpanded] = useState(false)
   const summary = getToolSummary(name, input)
   const isDone = hasResult || !streaming
+  const isExecuting = !isDone
   // Can expand if we have raw content or result text
   const canExpand = !!(rawContent || (hasResult && resultContent))
   const toolIcon = getToolIcon(name)
+  // Show inline parameter preview for executing tools
+  const paramPreview = isExecuting ? getToolParamPreview(name, input) : null
 
   return (
-    <div className={cn('rounded-lg border overflow-hidden my-1', isResultError ? 'border-coral/30' : 'border-subtle')}>
+    <div className={cn(
+      'rounded-lg border overflow-hidden my-1',
+      isResultError ? 'border-coral/30' : isExecuting ? 'border-indigo/40 tool-executing' : 'border-subtle'
+    )}>
       <button
         onClick={() => canExpand && setExpanded(!expanded)}
         className={cn(
@@ -1248,7 +1254,7 @@ function ToolUseBlock({ name, input, hasResult, isResultError, resultContent, ra
         ) : (
           <Loader2 size={14} className="text-indigo animate-spin shrink-0" />
         )}
-        <span className={cn('text-[12px] font-semibold shrink-0', isDone && !isResultError ? 'text-green' : isResultError ? 'text-coral' : 'text-secondary')}>{getToolDisplayName(name)}</span>
+        <span className={cn('text-[12px] font-semibold shrink-0', isDone && !isResultError ? 'text-green' : isResultError ? 'text-coral' : 'text-indigo')}>{getToolDisplayName(name)}</span>
         {summary && <span className="text-[12px] text-tertiary truncate flex-1">{summary}</span>}
         {rawContent?.type === 'web_search' && (
           <span className="text-[10px] text-muted shrink-0">{rawContent.results.length} results</span>
@@ -1257,6 +1263,12 @@ function ToolUseBlock({ name, input, hasResult, isResultError, resultContent, ra
           <ChevronDown size={12} className={cn('text-muted shrink-0 transition-transform ml-auto', expanded && 'rotate-180')} />
         )}
       </button>
+      {/* Inline parameter preview — shown while tool is executing */}
+      {paramPreview && isExecuting && (
+        <div className="px-3 py-2 border-t border-subtle/50 bg-elevated">
+          <pre className="text-[11px] text-muted font-mono whitespace-pre-wrap break-all leading-relaxed max-h-[120px] overflow-hidden">{paramPreview}</pre>
+        </div>
+      )}
       {canExpand && (
         <div
           className="grid transition-[grid-template-rows] duration-200 ease-in-out"
@@ -1919,5 +1931,48 @@ function getToolSummary(name: string, input: Record<string, unknown>): string {
     default:
       if (name.startsWith('browser_')) return name.replace('browser_', '')
       return ''
+  }
+}
+
+/**
+ * Get a detailed parameter preview shown inline while the tool is executing.
+ * Returns null if no meaningful preview can be generated.
+ */
+function getToolParamPreview(name: string, input: Record<string, unknown>): string | null {
+  switch (name) {
+    case 'Bash':
+    case 'run_command': {
+      const cmd = String(input.command || '')
+      return cmd ? cmd.slice(0, 500) : null
+    }
+    case 'Write':
+    case 'write_file': {
+      const content = String(input.content || '')
+      if (!content) return null
+      const lines = content.split('\n')
+      const preview = lines.slice(0, 8).join('\n')
+      const suffix = lines.length > 8 ? `\n... (+${lines.length - 8} more lines)` : ''
+      return `→ ${input.file_path || input.path || 'file'}\n${preview}${suffix}`
+    }
+    case 'Edit': {
+      const oldStr = String(input.old_string || '').slice(0, 100)
+      const newStr = String(input.new_string || '').slice(0, 100)
+      if (!oldStr && !newStr) return null
+      return `→ ${input.file_path || input.path || 'file'}\n- ${oldStr.split('\n')[0]}\n+ ${newStr.split('\n')[0]}`
+    }
+    case 'Read':
+    case 'read_file':
+      return input.file_path || input.path ? `→ ${input.file_path || input.path}` : null
+    case 'WebSearch':
+      return input.query ? `🔍 ${input.query}` : null
+    case 'WebFetch':
+      return input.url ? `→ ${input.url}` : null
+    case 'Glob':
+      return input.pattern ? `pattern: ${input.pattern}` : null
+    case 'Grep':
+    case 'search_content':
+      return input.pattern ? `pattern: ${input.pattern}${input.path ? `  in: ${input.path}` : ''}` : null
+    default:
+      return null
   }
 }
