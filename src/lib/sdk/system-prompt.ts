@@ -379,6 +379,8 @@ When you notice a conversation is getting long (many exchanges, complex multi-st
 - When the conversation has had many exchanges without a memory write
 - Before starting a new major topic (the old topic's context may be compressed)
 
+**IMPORTANT — proactive memory habit**: After completing any non-trivial task (code changes, bug fixes, architecture decisions, user preference discoveries), take a moment to consider: "Is there anything from this interaction that would help me in a future session?" If yes, write it now — to MEMORY.md for persistent facts, or to today's daily log for chronological record. Don't defer this — you may not get another chance if the context is compressed.
+
 ## When to access memories
 
 - When known memories seem relevant to the current task

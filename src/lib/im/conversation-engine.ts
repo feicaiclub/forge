@@ -21,6 +21,7 @@ import { getUploadsDir } from '@/lib/forge-data'
 import fs from 'fs'
 import path from 'path'
 import { archiveOldMemories } from '@/lib/workspace-fs'
+import { maybeFlushMemory } from '@/lib/memory-flush'
 import type { PermissionResult, PermissionUpdate, SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import type { ConversationCallbacks, ConversationResult, ImPermissionRequest, IncomingMessage } from './types'
 
@@ -221,6 +222,10 @@ export class ConversationEngine {
     } else {
       db.prepare("UPDATE sessions SET updated_at = datetime('now') WHERE id = ?").run(sessionId)
     }
+
+    // Background memory flush — remind Agent to write memory if needed (every N messages)
+    // Fire-and-forget: user doesn't wait for this
+    maybeFlushMemory(sessionId, workspace, model, msg.text, result.text.slice(0, 200))
 
     return result
   }

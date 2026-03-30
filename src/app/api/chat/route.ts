@@ -11,6 +11,7 @@ import { createPermissionBridge, cleanupStaleSessionAllowances } from '@/lib/sdk
 import { archiveOldMemories } from '@/lib/workspace-fs'
 import { resolveProvider } from '@/lib/provider'
 import { runSessionCleanup } from '@/lib/session-cleanup'
+import { maybeFlushMemory } from '@/lib/memory-flush'
 import { extractFilePaths, resolveFileAttachments, parseMediaProtocol } from '@/lib/im/conversation-engine'
 import type { Query } from '@anthropic-ai/claude-agent-sdk'
 
@@ -300,6 +301,11 @@ export async function POST(req: Request) {
         inputTokens: mapper.inputTokens,
         outputTokens: mapper.outputTokens,
       })
+
+      // Background memory flush — remind Agent to write memory if needed (every N messages)
+      // Fire-and-forget: user doesn't wait for this
+      const assistantText = blocks.filter((b: Record<string, unknown>) => b.type === 'text').map((b: Record<string, unknown>) => b.text).join(' ')
+      maybeFlushMemory(sessionId, session.workspace, session.model, effectiveMessage, assistantText.slice(0, 200))
     } catch (err) {
       // Save partial response if any blocks were generated
       const blocks = mapper.getBlocks()
