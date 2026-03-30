@@ -485,7 +485,7 @@ export function ScheduleView({ workspaceId }: ScheduleViewProps) {
 
       {/* Checklist Editor Modal */}
       {showChecklist && (
-        <EditChecklistModal onClose={() => setShowChecklist(false)} />
+        <EditChecklistModal workspaceId={workspaceId} onClose={() => setShowChecklist(false)} />
       )}
 
       {/* New Task Modal */}
@@ -514,24 +514,24 @@ export function ScheduleView({ workspaceId }: ScheduleViewProps) {
 
 /* ─── Edit Checklist Modal ─── */
 
-function EditChecklistModal({ onClose }: { onClose: () => void }) {
+function EditChecklistModal({ workspaceId, onClose }: { workspaceId: string; onClose: () => void }) {
   const { t } = useI18n()
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetch('/api/workspaces/default/files?name=HEARTBEAT.md')
+    fetch(`/api/workspaces/${workspaceId}/files?name=HEARTBEAT.md`)
       .then((r) => r.ok ? r.json() : { content: '' })
       .then((d) => setContent(d.content || ''))
       .catch(() => setContent(''))
       .finally(() => setLoading(false))
-  }, [])
+  }, [workspaceId])
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await fetch('/api/workspaces/default/files', {
+      await fetch(`/api/workspaces/${workspaceId}/files`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'HEARTBEAT.md', content }),
