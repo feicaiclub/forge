@@ -278,6 +278,28 @@ function buildSystemPrompt(workspaceId: string): string {
 }
 
 /**
+ * Build system prompt for IM queries.
+ * Uses compact base prompt (saves ~2500 tokens vs full) but still loads
+ * workspace context (SOUL.md, IDENTITY.md, USER.md, etc.) and memory
+ * context (MEMORY.md + recent daily memories) so IM Agent has the same
+ * personality, user info, and memory as the desktop Agent.
+ */
+function buildImSystemPrompt(workspaceId: string): string {
+  const workspaceContext = loadWorkspaceContext(workspaceId)
+  const memoryContext = loadMemoryContext(workspaceId)
+  const cwd = (() => { try { return getProjectPath(workspaceId) } catch { return process.cwd() } })()
+
+  const systemParts: string[] = [
+    FORGE_IM_SYSTEM_PROMPT,
+    buildEnvironmentPrompt(cwd),
+  ]
+  if (workspaceContext) systemParts.push(workspaceContext)
+  if (memoryContext) systemParts.push(memoryContext)
+
+  return systemParts.join('\n\n---\n\n')
+}
+
+/**
  * Map unified thinking mode (Off/Auto/Max) to provider-specific SDK parameters.
  *
  * All providers use Anthropic-compatible endpoints, so the SDK `thinking` option
@@ -358,9 +380,10 @@ export function createForgeQuery(opts: ForgeQueryOptions): Query {
   const resolved = resolveProvider(opts.model)
 
   // Build system prompt
-  // IM queries use a compact prompt to reduce token overhead
+  // IM queries use a compact base prompt but still load workspace context + memory
+  // to maintain consistent personality, user info, and memory across desktop and IM
   const systemPrompt = opts.customSystemPrompt
-    || (opts.useImPrompt ? FORGE_IM_SYSTEM_PROMPT : buildSystemPrompt(opts.workspaceId))
+    || (opts.useImPrompt ? buildImSystemPrompt(opts.workspaceId) : buildSystemPrompt(opts.workspaceId))
 
   // Load agents from .claude/agents/*.md files (skip for IM — not needed)
   const agents = opts.skipAgents ? {} : loadAgentsFromFiles(opts.workspaceId)
