@@ -3,7 +3,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { createServer } from 'node:net'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, watch, type FSWatcher } from 'node:fs'
+import { existsSync, readdirSync, statSync, watch, type FSWatcher } from 'node:fs'
 
 const isDev = !app.isPackaged
 
@@ -89,6 +89,35 @@ function waitForServer(url: string, timeoutMs = 30000): Promise<void> {
   })
 }
 
+function findStandaloneAppRoot(standaloneDir: string): string {
+  const directServer = path.join(standaloneDir, 'server.js')
+  if (existsSync(directServer)) return standaloneDir
+
+  const queue = [standaloneDir]
+  while (queue.length > 0) {
+    const dir = queue.shift()
+    if (!dir) continue
+
+    let entries: string[] = []
+    try {
+      entries = readdirSync(dir)
+    } catch {
+      continue
+    }
+
+    for (const entry of entries) {
+      if (entry === 'node_modules' || entry === '.next') continue
+      const fullPath = path.join(dir, entry)
+      if (existsSync(path.join(fullPath, 'server.js'))) return fullPath
+      try {
+        if (statSync(fullPath).isDirectory()) queue.push(fullPath)
+      } catch { /* ignore */ }
+    }
+  }
+
+  throw new Error(`Could not find standalone server.js under ${standaloneDir}`)
+}
+
 // Start Next.js standalone server in production
 async function startServer(): Promise<number> {
   const port = await getFreePort()
@@ -98,10 +127,9 @@ async function startServer(): Promise<number> {
   const appPath = app.getAppPath()
   // Resources directory is alongside app.asar in Contents/Resources/
   const resourcesDir = path.dirname(appPath)
-
-  // server.js is at standalone/Documents/AI-code/forge/server.js due to Next.js trace output
-  const serverScript = path.join(resourcesDir, 'standalone', 'Documents', 'AI-code', 'forge', 'server.js')
-  const cwd = path.join(resourcesDir, 'standalone', 'Documents', 'AI-code', 'forge')
+  const standaloneDir = path.join(resourcesDir, 'standalone')
+  const cwd = findStandaloneAppRoot(standaloneDir)
+  const serverScript = path.join(cwd, 'server.js')
 
   // Use system Node.js to run the standalone server
   // This avoids needing to rebuild native modules (better-sqlite3) for Electron's ABI

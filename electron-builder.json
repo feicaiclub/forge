@@ -18,9 +18,9 @@
   ],
   "extraResources": [
     {
-      "from": ".next/standalone/Documents/",
-      "to": "standalone/Documents/",
-      "filter": ["**/*", "!**/.nvm/**", "!**/.local/**", "!**/.claude.json", "!.forge-data", "!.env", "!.env.*", "!forge.db*", "!release", "!.claude/plugins/**/*", "!.claude/telemetry/**/*"]
+      "from": ".next/standalone/",
+      "to": "standalone/",
+      "filter": ["**/*", "!node_modules", "!.forge-data", "!.env", "!.env.*", "!forge.db*", "!release"]
     },
     {
       "from": ".next/standalone/node_modules/",

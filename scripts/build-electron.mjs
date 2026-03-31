@@ -85,12 +85,33 @@ function copyTemplates(standaloneDir) {
   }
 }
 
+function findStandaloneAppRoot(standaloneDir) {
+  const directServer = join(standaloneDir, 'server.js')
+  if (existsSync(directServer)) return standaloneDir
+
+  const queue = [standaloneDir]
+  while (queue.length > 0) {
+    const dir = queue.shift()
+    if (!dir) continue
+
+    let entries
+    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { continue }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      if (entry.name === 'node_modules' || entry.name === '.next') continue
+      const fullPath = join(dir, entry.name)
+      if (existsSync(join(fullPath, 'server.js'))) return fullPath
+      queue.push(fullPath)
+    }
+  }
+
+  throw new Error(`Could not find standalone server.js under ${standaloneDir}`)
+}
+
 // Step 3a: Copy runtime assets into the actual standalone app root.
-// Next.js emits server.js under standalone/Documents/... when the tracing root
-// is above the project. The server runs from that nested directory, so it
-// expects both .next/static and public/ to live there as well.
 function copyRuntimeAssets(standaloneDir) {
-  const appDir = join(standaloneDir, 'Documents', 'AI-code', 'forge')
+  const appDir = findStandaloneAppRoot(standaloneDir)
   if (!existsSync(appDir)) return
 
   const staticSrc = join(process.cwd(), '.next', 'static')
@@ -423,14 +444,10 @@ try {
   copyTemplates(standaloneDir)
   copyRuntimeAssets(standaloneDir)
   stripDevPaths(standaloneDir)
-
-  // Also resolve symlinks in Documents/AI-code/forge/ directory (Next.js trace output)
-  const docsDir = join(standaloneDir, 'Documents', 'AI-code', 'forge')
-  if (existsSync(docsDir)) {
-    resolveSymlinks(docsDir)
-    fixPnpmHoisting(docsDir)
-    resolveSymlinks(docsDir)  // Second pass
-  }
+  const appDir = findStandaloneAppRoot(standaloneDir)
+  resolveSymlinks(appDir)
+  fixPnpmHoisting(appDir)
+  resolveSymlinks(appDir)
 } catch {
   console.log('⚠️  No .next/standalone found — skipping symlink resolution (dev build?)')
 }

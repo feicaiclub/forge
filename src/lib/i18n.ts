@@ -335,8 +335,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'onboarding.skipForNow': '跳过 — 稍后在设置中配置',
 
     // Settings additional
-    'settings.customProviderDesc': '自定义提供商仅支持 Anthropic 兼容端点。填写 API Key、Anthropic 兼容 Base URL 和模型名称后即可用于 Forge 对话。',
+    'settings.customProviderDesc': '先选择协议，再填写端点。Anthropic 兼容的自定义提供商可直接用于 Forge 对话；OpenAI 兼容端点保留为兼容选项。',
     'settings.customProviderAnthropicNote': 'Anthropic 兼容的自定义提供商会进入模型列表，并可用于实际对话。',
+    'settings.customProviderOpenAiNote': 'OpenAI 兼容的自定义提供商保留为兼容选项，适用于已存在的 OpenAI 兼容端点配置。',
 
     // Settings - theme/session/thinking options
     'settings.themeDark': '深色',
@@ -884,8 +885,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'onboarding.skipForNow': "Skip for now — I'll configure in Settings later",
 
     // Settings additional
-    'settings.customProviderDesc': 'Custom providers only support Anthropic-compatible endpoints. Enter the API key, Anthropic-compatible base URL, and model name to use them in Forge chats.',
+    'settings.customProviderDesc': 'Choose a protocol first, then enter the endpoint. Anthropic-compatible custom providers can be used for Forge chats, while OpenAI-compatible endpoints are kept as a compatibility option.',
     'settings.customProviderAnthropicNote': 'Anthropic-compatible custom providers appear in model pickers and can be used for real chats.',
+    'settings.customProviderOpenAiNote': 'OpenAI-compatible custom providers are kept as a compatibility option for existing OpenAI-style endpoint configurations.',
 
     // Settings - theme/session/thinking options
     'settings.themeDark': 'Dark',

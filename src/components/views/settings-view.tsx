@@ -9,7 +9,7 @@ import { useTheme } from '@/components/providers/theme-provider'
 import { useI18n } from '@/components/providers/i18n-provider'
 import { useSettings } from '@/hooks/use-settings'
 import { useApiProviders } from '@/hooks/use-api-providers'
-import type { ApiProvider } from '@/lib/types'
+import type { ApiProvider, ProviderProtocol } from '@/lib/types'
 
 const BUILTIN_PROVIDER_ORDER = ['anthropic', 'minimax', 'zhipu', 'moonshot', 'qwen', 'bailian-codingplan'] as const
 const PROVIDER_LABELS: Record<string, string> = {
@@ -236,7 +236,7 @@ function ModelApiSection({
   providers: ApiProvider[]
   updateProvider: (id: string, updates: Record<string, unknown>) => Promise<ApiProvider>
   testConnection: (id: string) => Promise<ApiProvider | null>
-  onCreateCustomProvider?: (data: { name: string; baseUrl: string; apiKey: string; modelName: string }) => Promise<ApiProvider>
+  onCreateCustomProvider?: (data: { name: string; baseUrl: string; apiKey: string; modelName: string; protocol: ProviderProtocol }) => Promise<ApiProvider>
   onDeleteProvider?: (id: string) => Promise<void>
 }) {
   const { t } = useI18n()
@@ -672,11 +672,12 @@ function DataSection({ get, handleSettingChange, handleExport, handleClearAll, c
 /* ── Add Custom Provider Form ── */
 
 function AddCustomProviderForm({ onCreate, onCancel }: {
-  onCreate: (data: { name: string; baseUrl: string; apiKey: string; modelName: string }) => Promise<void>
+  onCreate: (data: { name: string; baseUrl: string; apiKey: string; modelName: string; protocol: ProviderProtocol }) => Promise<void>
   onCancel: () => void
 }) {
   const { t } = useI18n()
   const [name, setName] = useState('')
+  const [protocol, setProtocol] = useState<ProviderProtocol>('anthropic-compatible')
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [modelName, setModelName] = useState('')
@@ -696,8 +697,20 @@ function AddCustomProviderForm({ onCreate, onCancel }: {
             className="w-full h-9 px-3 rounded-lg bg-page border border-subtle text-[13px] text-primary placeholder:text-muted outline-none focus:border-indigo" />
         </div>
         <div className="space-y-1.5">
+          <label className="text-[12px] font-medium text-secondary">{t('form.protocol')}</label>
+          <Select
+            value={protocol}
+            onChange={(value) => setProtocol(value as ProviderProtocol)}
+            options={[
+              { value: 'anthropic-compatible', label: t('protocol.anthropicCompatible') },
+              { value: 'openai-compatible', label: t('protocol.openaiCompatible') },
+            ]}
+            width={220}
+          />
+        </div>
+        <div className="space-y-1.5">
           <label className="text-[12px] font-medium text-secondary">{t('form.baseUrl')}</label>
-          <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.example.com/anthropic"
+          <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={protocol === 'anthropic-compatible' ? 'https://api.example.com/anthropic' : 'https://api.example.com/v1'}
             className="w-full h-9 px-3 rounded-lg bg-page border border-subtle text-[13px] text-primary placeholder:text-muted outline-none focus:border-indigo" />
         </div>
         <div className="space-y-1.5">
@@ -717,7 +730,7 @@ function AddCustomProviderForm({ onCreate, onCancel }: {
           {t('common.cancel')}
         </button>
         <button
-          onClick={async () => { setSaving(true); await onCreate({ name: name.trim(), baseUrl: baseUrl.trim(), apiKey: apiKey.trim(), modelName: modelName.trim() }); setSaving(false) }}
+          onClick={async () => { setSaving(true); await onCreate({ name: name.trim(), protocol, baseUrl: baseUrl.trim(), apiKey: apiKey.trim(), modelName: modelName.trim() }); setSaving(false) }}
           disabled={!canSave || saving}
           className="px-4 h-9 rounded-lg bg-indigo text-white text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
         >
@@ -825,6 +838,18 @@ function ProviderConfig({ provider, onUpdate, onTestConnection, onDelete, settin
       {isCustomProvider && (
         <>
           <div className="space-y-1.5">
+            <label className="text-[12px] text-secondary">{t('form.protocol')}</label>
+            <Select
+              value={provider.protocol}
+              onChange={(v) => onUpdate(provider.id, { protocol: v, status: 'not_configured', status_error: '' })}
+              options={[
+                { value: 'anthropic-compatible', label: t('protocol.anthropicCompatible') },
+                { value: 'openai-compatible', label: t('protocol.openaiCompatible') },
+              ]}
+              width={220}
+            />
+          </div>
+          <div className="space-y-1.5">
             <label className="text-[12px] text-secondary">{t('form.baseUrl')}</label>
             <DebouncedInput value={provider.baseUrl || ''} onSave={(v) => onUpdate(provider.id, { base_url: v })} placeholder="https://..." />
           </div>
@@ -833,7 +858,9 @@ function ProviderConfig({ provider, onUpdate, onTestConnection, onDelete, settin
             <DebouncedInput value={provider.modelName || ''} onSave={(v) => onUpdate(provider.id, { model_name: v })} placeholder="e.g. gpt-4o, deepseek-chat" />
           </div>
           <div className="text-[11px] text-tertiary bg-page/70 border border-subtle rounded-lg px-3 py-2">
-            {t('settings.customProviderAnthropicNote')}
+            {provider.protocol === 'openai-compatible'
+              ? t('settings.customProviderOpenAiNote')
+              : t('settings.customProviderAnthropicNote')}
           </div>
         </>
       )}

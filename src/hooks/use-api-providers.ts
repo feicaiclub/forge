@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { ApiProvider, ApiProviderStatus } from '@/lib/types'
+import type { ApiProvider, ApiProviderStatus, ProviderProtocol } from '@/lib/types'
 
 interface DbApiProvider {
   id: string
   name: string
   provider: string
+  protocol: string
   api_key: string
   base_url: string
   model_name: string
@@ -22,6 +23,7 @@ function mapProvider(row: DbApiProvider): ApiProvider {
     id: row.id,
     name: row.name,
     provider: row.provider as ApiProvider['provider'],
+    protocol: (row.protocol || 'anthropic-compatible') as ProviderProtocol,
     apiKey: row.api_key,
     baseUrl: row.base_url,
     modelName: row.model_name || '',
@@ -78,7 +80,7 @@ export function useApiProviders() {
     }
   }, [])
 
-  const createProvider = useCallback(async (data: { name: string; baseUrl: string; apiKey: string; modelName: string }) => {
+  const createProvider = useCallback(async (data: { name: string; baseUrl: string; apiKey: string; modelName: string; protocol: ProviderProtocol }) => {
     const res = await fetch('/api/api-providers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
