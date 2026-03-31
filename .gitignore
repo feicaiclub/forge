@@ -15,6 +15,7 @@ next-env.d.ts
 forge.db
 forge.db-shm
 forge.db-wal
+pnpm-lock.yaml
 
 # Bundled Node.js runtime (downloaded during build)
 node-runtime/

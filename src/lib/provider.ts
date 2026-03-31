@@ -108,6 +108,27 @@ export function getClaudeCliAccountInfo(): { email: string; displayName: string;
 export function resolveProvider(model?: string): ResolvedProvider {
   const db = getDb()
 
+  // 0. Check for custom provider format: "providerId:modelName"
+  if (model?.includes(':')) {
+    const [providerId, modelName] = model.split(':', 2)
+    const customRow = db.prepare(
+      "SELECT id, name, api_key, base_url FROM api_providers WHERE id = ? AND model_name = ? AND api_key != ''"
+    ).get(providerId, modelName) as { id: string; name: string; api_key: string; base_url: string } | undefined
+
+    if (customRow) {
+      return {
+        apiKey: customRow.api_key,
+        baseUrl: customRow.base_url || undefined,
+        provider: 'custom',
+        providerId: customRow.id,
+        isCliAuth: false,
+        authType: 'auth_token',
+      }
+    }
+    // If custom provider not found, fall through to try modelName as regular model
+    model = modelName
+  }
+
   // 1. Try built-in provider lookup
   const builtinProviderId = model ? MODEL_TO_PROVIDER[model] : undefined
 

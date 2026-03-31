@@ -11,6 +11,8 @@ import { BUILTIN_MODELS, type ModelEntry } from '@/lib/models'
  */
 export async function GET() {
   const models: ModelEntry[] = [...BUILTIN_MODELS]
+  // Track provider+model combination to avoid duplicates
+  const seen = new Set(BUILTIN_MODELS.map(m => `${m.providerId}:${m.id}`))
 
   // Add custom provider models from DB
   try {
@@ -20,8 +22,12 @@ export async function GET() {
     ).all() as { id: string; name: string; model_name: string }[]
 
     for (const row of customs) {
+      // Use providerId:modelName format to distinguish from built-in models
+      const modelId = `${row.id}:${row.model_name}`
+      if (seen.has(modelId)) continue
+      seen.add(modelId)
       models.push({
-        id: row.model_name,
+        id: modelId,
         label: `${row.model_name} (${row.name})`,
         provider: row.name,
         providerId: row.id,

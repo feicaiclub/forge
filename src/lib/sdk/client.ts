@@ -379,6 +379,10 @@ export function createForgeQuery(opts: ForgeQueryOptions): Query {
   // Resolve API key (supports both API key and CLI auth modes)
   const resolved = resolveProvider(opts.model)
 
+  // Extract actual model name for SDK (strip providerId prefix if present)
+  // Format: "providerId:modelName" → "modelName"
+  const actualModel = opts.model?.includes(':') ? opts.model.split(':', 2)[1] : opts.model
+
   // Build system prompt
   // IM queries use a compact base prompt but still load workspace context + memory
   // to maintain consistent personality, user info, and memory across desktop and IM
@@ -414,7 +418,7 @@ export function createForgeQuery(opts: ForgeQueryOptions): Query {
   // First message: set sessionId to persist the session.
   // Subsequent messages: set resume (without sessionId) to continue the conversation.
   const sdkOptions: Options = {
-    model: opts.model,
+    model: actualModel,
     cwd: (() => { try { return getProjectPath(opts.workspaceId) } catch { return process.cwd() } })(),
     systemPrompt,
     env: sdkEnv,
