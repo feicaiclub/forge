@@ -601,7 +601,7 @@ export function ChatView({
                     <div className="px-4 py-1 text-[10px] font-medium text-muted uppercase tracking-wide">{provider}</div>
                     {MODEL_OPTIONS.filter(o => o.provider === provider).map(opt => (
                       <button
-                        key={opt.id}
+                        key={`${opt.providerId}-${opt.id}`}
                         onClick={() => {
                           onModelChange?.(opt.id)
                           setModelPickerOpen(false)
@@ -800,7 +800,7 @@ export function ChatView({
                   )}
                 >
                   <span className={cn('text-[11px] font-medium', modelOpen ? 'text-indigo font-semibold' : 'text-secondary')}>
-                    {formatModelShort(session.model)}
+                    {MODEL_OPTIONS.find(o => o.id === session.model)?.label || formatModelShort(session.model)}
                   </span>
                   <ChevronDown size={10} className={cn('transition-transform', modelOpen ? 'text-indigo rotate-180' : 'text-tertiary')} />
                 </button>
@@ -812,7 +812,7 @@ export function ChatView({
                     </div>
                     {MODEL_OPTIONS.filter(o => o.provider === 'Anthropic').map((opt) => (
                       <button
-                        key={opt.id}
+                        key={`${opt.providerId}-${opt.id}`}
                         onClick={() => { onModelChange?.(opt.id); setModelOpen(false) }}
                         className={cn(
                           'flex items-center gap-2 w-full px-2.5 h-8 rounded-md transition-colors text-left',
@@ -831,7 +831,7 @@ export function ChatView({
                     </div>
                     {MODEL_OPTIONS.filter(o => o.provider !== 'Anthropic').map((opt) => (
                       <button
-                        key={opt.id}
+                        key={`${opt.providerId}-${opt.id}`}
                         onClick={() => { onModelChange?.(opt.id); setModelOpen(false) }}
                         className={cn(
                           'flex items-center gap-2 w-full px-2.5 h-8 rounded-md transition-colors text-left',

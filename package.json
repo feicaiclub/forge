@@ -29,6 +29,7 @@
     "@larksuiteoapi/node-sdk": "^1.59.0",
     "better-sqlite3": "^11.0.0",
     "clsx": "^2.1.0",
+    "electron": "^41.1.0",
     "lucide-react": "^0.500.0",
     "next": "^15.3.0",
     "react": "^19.0.0",
@@ -48,7 +49,6 @@
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.0.0",
-    "electron": "40.8.0",
     "electron-builder": "^26.0.0",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.0",
@@ -59,9 +59,9 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "better-sqlite3",
       "electron",
-      "esbuild",
-      "better-sqlite3"
+      "esbuild"
     ]
   }
 }
