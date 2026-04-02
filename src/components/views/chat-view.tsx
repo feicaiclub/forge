@@ -11,7 +11,7 @@ import { AgentBlock, ParallelAgentIndicator, isAgentToolCall } from '@/component
 import { SlashCommandMenu } from '@/components/chat/slash-command-menu'
 import { useSlashCommands } from '@/hooks/use-slash-commands'
 import { useModels } from '@/hooks/use-models'
-import { BUILTIN_MODELS } from '@/lib/models'
+import { getModelDisplayLabel, getModelLabel } from '@/lib/models'
 import { filterCommands, type SlashCommand } from '@/lib/slash-commands'
 
 interface ChatViewProps {
@@ -1885,8 +1885,8 @@ function getExportToolSummary(name: string, input: Record<string, unknown>): str
 }
 
 function formatModel(model: string): string {
-  const found = BUILTIN_MODELS.find((o) => o.id === model)
-  if (found) return found.label
+  const knownLabel = getModelDisplayLabel(model) || getModelLabel(model)
+  if (knownLabel) return knownLabel
   // Fallback: prettify the model ID
   if (model.includes('opus')) return 'Claude Opus 4.6'
   if (model.includes('haiku')) return 'Claude Haiku 4.5'

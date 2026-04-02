@@ -11,7 +11,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
 
-  const allowedFields = ['api_key', 'base_url', 'is_active', 'status', 'status_error', 'name', 'model_name'] as const
+  if ('protocol' in body && body.protocol !== 'anthropic-compatible' && body.protocol !== 'openai-compatible') {
+    return NextResponse.json({ error: 'Invalid protocol' }, { status: 400 })
+  }
+
+  const allowedFields = ['api_key', 'base_url', 'is_active', 'status', 'status_error', 'name', 'model_name', 'protocol'] as const
   const sets: string[] = []
   const values: unknown[] = []
 

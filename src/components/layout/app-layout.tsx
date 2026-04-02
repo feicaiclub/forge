@@ -24,12 +24,7 @@ import { useTheme } from '@/components/providers/theme-provider'
 import type { View } from '@/lib/types'
 import { GLOBAL_WORKSPACE_ID } from '@/lib/types'
 
-import { BUILTIN_MODELS } from '@/lib/models'
-
-/** Model ID → provider type (lowercase) for per-provider settings lookup */
-const MODEL_PROVIDER_MAP: Record<string, string> = Object.fromEntries(
-  BUILTIN_MODELS.map(m => [m.id, m.providerId])
-)
+import { getModelProviderId } from '@/lib/models'
 
 export function AppLayout() {
   const [activeView, setActiveView] = useState<View>('chat')
@@ -292,7 +287,7 @@ export function AppLayout() {
   const providerThinkingDefault = useMemo(() => {
     const session = sessions.find(s => s.id === activeSessionId)
     const model = session?.model || settings.default_model || 'claude-sonnet-4-6'
-    const providerType = MODEL_PROVIDER_MAP[model] || 'anthropic'
+    const providerType = getModelProviderId(model) || 'anthropic'
     const raw = settings[`thinking_mode_${providerType}`] || settings.thinking_mode || 'auto'
     const legacy: Record<string, string> = { adaptive: 'auto', enabled: 'max', disabled: 'off' }
     return legacy[raw] || raw

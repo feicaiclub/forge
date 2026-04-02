@@ -23,3 +23,5 @@ node-runtime/
 .claude/
 DEV-PLAN.md
 Product-Spec*.md
+AGENTS.md
+CLAUDE.md

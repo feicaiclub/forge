@@ -119,14 +119,15 @@ export interface McpServer {
 }
 
 // API Provider types
-export type ProviderType = 'anthropic' | 'minimax' | 'zhipu' | 'moonshot' | 'qwen' | 'custom'
-
+export type ProviderType = 'anthropic' | 'minimax' | 'zhipu' | 'moonshot' | 'qwen' | 'bailian-codingplan' | 'custom'
+export type ProviderProtocol = 'anthropic-compatible' | 'openai-compatible'
 export type ApiProviderStatus = 'not_configured' | 'connected' | 'cli_authenticated' | 'error' | 'testing'
 
 export interface ApiProvider {
   id: string
   name: string
   provider: ProviderType
+  protocol: ProviderProtocol
   apiKey: string
   baseUrl: string
   modelName?: string
@@ -217,4 +218,3 @@ export interface MarketplaceTemplate {
   createdAt: string
   updatedAt: string
 }
-

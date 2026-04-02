@@ -54,10 +54,15 @@ const PROVIDER_CATALOG: Record<string, {
     anthropicBaseUrl: 'https://dashscope.aliyuncs.com/apps/anthropic',
     authType: 'auth_token',
   },
+  // Bailian CodingPlan (Anthropic-compatible)
+  'bailian-codingplan': {
+    anthropicBaseUrl: 'https://coding.dashscope.aliyuncs.com/apps/anthropic',
+    authType: 'auth_token',
+  },
 }
 
 // Import model-to-provider mapping from single source of truth
-import { MODEL_TO_PROVIDER } from './models'
+import { MODEL_TO_PROVIDER, parseCustomModelId } from './models'
 
 /**
  * Check if Claude Code CLI is authenticated by looking for ~/.claude.json oauthAccount.
@@ -144,7 +149,26 @@ export function resolveProvider(model?: string): ResolvedProvider {
     throw new Error('No Anthropic credentials found. Either add an API key in Settings, or run `claude login` in your terminal to authenticate with your Claude subscription.')
   }
 
-  // 2. Try custom provider lookup: match model_name in api_providers where provider='custom'
+  // 2. Try custom provider lookup: first by namespaced model ID, then legacy raw model_name.
+  const customModel = parseCustomModelId(model)
+  if (customModel) {
+    const customRow = db.prepare(
+      "SELECT id, name, api_key, base_url FROM api_providers WHERE provider = 'custom' AND id = ? AND model_name = ? AND api_key != ''"
+    ).get(customModel.providerId, customModel.modelName) as { id: string; name: string; api_key: string; base_url: string } | undefined
+
+    if (customRow) {
+      return {
+        apiKey: customRow.api_key,
+        baseUrl: customRow.base_url || undefined,
+        provider: 'custom',
+        providerId: customRow.id,
+        isCliAuth: false,
+        authType: 'auth_token',
+      }
+    }
+  }
+
+  // Legacy custom provider lookup: match raw model_name in api_providers where provider='custom'
   if (model) {
     const customRow = db.prepare(
       "SELECT id, name, api_key, base_url FROM api_providers WHERE provider = 'custom' AND model_name = ? AND api_key != ''"

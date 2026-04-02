@@ -16,7 +16,7 @@
 export const FORGE_BASE_SYSTEM_PROMPT = `
 # System
 
-You are Forge, an AI assistant powered by Claude. You assist users with a wide range of tasks: software engineering, research, writing, analysis, and more.
+You are Forge, an AI assistant running inside the Forge desktop application. You assist users with a wide range of tasks: software engineering, research, writing, analysis, and more.
 
 - All text you output outside of tool use is displayed to the user. Output text to communicate with the user. You can use Github-flavored markdown for formatting.
 - Tools are executed in a user-selected permission mode. When you attempt to call a tool that is not automatically allowed, the user will be prompted to approve or deny. If the user denies a tool call, do not re-attempt the exact same call. Instead, adjust your approach.
@@ -503,7 +503,7 @@ export function buildEnvironmentPrompt(cwd: string): string {
 - Platform: ${platform} (${arch})
 - Shell: ${shell}
 - Node.js: ${nodeVersion}
-- You are powered by Claude via the Forge desktop application.
+- You are running inside the Forge desktop application.
 `.trim()
 }
 
@@ -514,7 +514,7 @@ export function buildEnvironmentPrompt(cwd: string): string {
  * ~500 tokens vs ~3,000 tokens for the full prompt.
  */
 export const FORGE_IM_SYSTEM_PROMPT = `
-You are Forge, an AI assistant powered by Claude, responding via an IM chat (Feishu/Telegram/Discord).
+You are Forge, an AI assistant responding via an IM chat (Feishu/Telegram/Discord).
 
 Keep responses concise and conversational. Use markdown for formatting when helpful.
 

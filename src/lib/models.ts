@@ -8,8 +8,10 @@
 export interface ModelEntry {
   id: string
   label: string
+  displayLabel?: string // Optional shorter UI label for chat/model pickers
   provider: string      // Display name: 'Anthropic', 'Moonshot', etc.
   providerId: string    // DB provider ID: 'anthropic', 'moonshot', etc.
+  apiModelId?: string   // Actual upstream model name sent to the provider API
   aliases?: string[]    // For IM /model fuzzy matching
 }
 
@@ -39,7 +41,18 @@ export const BUILTIN_MODELS: ModelEntry[] = [
   { id: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus', provider: 'Qwen', providerId: 'qwen', aliases: ['qwen-coder'] },
   { id: 'qwen-max', label: 'Qwen Max', provider: 'Qwen', providerId: 'qwen', aliases: ['qwen-max'] },
   { id: 'qwen-plus', label: 'Qwen Plus', provider: 'Qwen', providerId: 'qwen', aliases: ['qwen-plus'] },
+  // Bailian CodingPlan (internal IDs are namespaced to avoid provider routing collisions)
+  { id: 'bailian-codingplan:qwen3.5-plus', apiModelId: 'qwen3.5-plus', label: 'qwen3.5-plus', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['qwen3.5-codingplan'] },
+  { id: 'bailian-codingplan:qwen3-max-2026-01-23', apiModelId: 'qwen3-max-2026-01-23', label: 'qwen3-max-2026-01-23', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['qwen3-max-codingplan'] },
+  { id: 'bailian-codingplan:qwen3-coder-next', apiModelId: 'qwen3-coder-next', label: 'qwen3-coder-next', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['coder-next', 'codingplan'] },
+  { id: 'bailian-codingplan:qwen3-coder-plus', apiModelId: 'qwen3-coder-plus', label: 'qwen3-coder-plus', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['coder-plus'] },
+  { id: 'bailian-codingplan:glm-5', apiModelId: 'glm-5', label: 'glm-5', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['glm5-codingplan'] },
+  { id: 'bailian-codingplan:glm-4.7', apiModelId: 'glm-4.7', label: 'glm-4.7', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['glm4.7-codingplan'] },
+  { id: 'bailian-codingplan:kimi-k2.5', apiModelId: 'kimi-k2.5', label: 'kimi-k2.5', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['kimi-codingplan'] },
+  { id: 'bailian-codingplan:MiniMax-M2.5', apiModelId: 'MiniMax-M2.5', label: 'MiniMax-M2.5', provider: 'Bailian', providerId: 'bailian-codingplan', aliases: ['minimax-codingplan'] },
 ]
+
+const BUILTIN_MODEL_BY_ID = new Map(BUILTIN_MODELS.map(model => [model.id, model]))
 
 /**
  * Build MODEL_TO_PROVIDER mapping from BUILTIN_MODELS.
@@ -48,3 +61,53 @@ export const BUILTIN_MODELS: ModelEntry[] = [
 export const MODEL_TO_PROVIDER: Record<string, string> = Object.fromEntries(
   BUILTIN_MODELS.map(m => [m.id, m.providerId])
 )
+
+export function getModelEntry(modelId?: string | null): ModelEntry | undefined {
+  if (!modelId) return undefined
+  return BUILTIN_MODEL_BY_ID.get(modelId) || undefined
+}
+
+export function getModelProviderId(modelId?: string | null): string | undefined {
+  const entry = getModelEntry(modelId)
+  if (entry) return entry.providerId
+  return parseCustomModelId(modelId)?.providerId ? 'custom' : undefined
+}
+
+export function getApiModelId(modelId?: string | null): string | undefined {
+  const entry = getModelEntry(modelId)
+  if (entry) return entry.apiModelId || entry.id
+  const customModel = parseCustomModelId(modelId)
+  return customModel?.modelName || modelId || undefined
+}
+
+export function getModelLabel(modelId?: string | null): string | undefined {
+  const entry = getModelEntry(modelId)
+  if (entry) return entry.label
+  const customModel = parseCustomModelId(modelId)
+  return customModel?.modelName
+}
+
+export function getModelDisplayLabel(modelId?: string | null): string | undefined {
+  const entry = getModelEntry(modelId)
+  if (entry) return entry.displayLabel || entry.label
+  const customModel = parseCustomModelId(modelId)
+  return customModel?.modelName
+}
+
+export function makeCustomModelId(providerId: string, modelName: string): string {
+  return `custom:${providerId}:${encodeURIComponent(modelName)}`
+}
+
+export function parseCustomModelId(modelId?: string | null): { providerId: string; modelName: string } | null {
+  if (!modelId || !modelId.startsWith('custom:')) return null
+  const firstColon = modelId.indexOf(':')
+  const secondColon = modelId.indexOf(':', firstColon + 1)
+  if (secondColon === -1) return null
+  const providerId = modelId.slice(firstColon + 1, secondColon)
+  const encodedModelName = modelId.slice(secondColon + 1)
+  if (!providerId || !encodedModelName) return null
+  return {
+    providerId,
+    modelName: decodeURIComponent(encodedModelName),
+  }
+}

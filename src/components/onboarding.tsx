@@ -16,6 +16,7 @@ const OTHER_PROVIDERS = [
   { id: 'zhipu', label: 'GLM' },
   { id: 'moonshot', label: 'Kimi' },
   { id: 'qwen', label: 'Qwen' },
+  { id: 'bailian-codingplan', label: 'Bailian CodingPlan' },
 ]
 
 export function Onboarding({ onComplete }: OnboardingProps) {

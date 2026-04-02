@@ -167,6 +167,7 @@ export function getDb(): Database.Database {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       provider TEXT NOT NULL,
+      protocol TEXT NOT NULL DEFAULT 'anthropic-compatible',
       api_key TEXT NOT NULL DEFAULT '',
       base_url TEXT NOT NULL DEFAULT '',
       model_name TEXT NOT NULL DEFAULT '',
@@ -211,6 +212,7 @@ export function getDb(): Database.Database {
     INSERT OR IGNORE INTO api_providers (id, name, provider) VALUES ('zhipu', 'GLM', 'zhipu');
     INSERT OR IGNORE INTO api_providers (id, name, provider) VALUES ('moonshot', 'Kimi', 'moonshot');
     INSERT OR IGNORE INTO api_providers (id, name, provider) VALUES ('qwen', 'Qwen', 'qwen');
+    INSERT OR IGNORE INTO api_providers (id, name, provider) VALUES ('bailian-codingplan', 'Bailian CodingPlan', 'bailian-codingplan');
 
     -- Seed IM channels
     INSERT OR IGNORE INTO im_channels (id, type) VALUES ('feishu', 'feishu');
@@ -329,6 +331,12 @@ export function getDb(): Database.Database {
   // Migrate api_providers: add model_name column
   if (!apColNames.includes('model_name')) {
     db.exec("ALTER TABLE api_providers ADD COLUMN model_name TEXT NOT NULL DEFAULT ''")
+  }
+
+  // Migrate api_providers: add protocol column for custom provider transport selection
+  if (!apColNames.includes('protocol')) {
+    db.exec("ALTER TABLE api_providers ADD COLUMN protocol TEXT NOT NULL DEFAULT 'anthropic-compatible'")
+    db.exec("UPDATE api_providers SET protocol = 'anthropic-compatible' WHERE provider = 'custom'")
   }
 
   // Migrate hooks table: remove CHECK constraint on event column to support new event types

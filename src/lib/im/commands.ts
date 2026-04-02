@@ -33,7 +33,7 @@ const KNOWN_COMMANDS = [
   'mode', 'status', 'stop', 'help',
 ]
 
-import { BUILTIN_MODELS } from '@/lib/models'
+import { BUILTIN_MODELS, makeCustomModelId } from '@/lib/models'
 
 interface ImModelEntry {
   id: string
@@ -55,10 +55,10 @@ function getAvailableModels(): ImModelEntry[] {
   // Add custom provider models from DB
   try {
     const customs = getDb().prepare(
-      "SELECT model_name, name FROM api_providers WHERE provider = 'custom' AND model_name != '' AND status = 'connected'"
-    ).all() as { model_name: string; name: string }[]
+      "SELECT id, model_name, name FROM api_providers WHERE provider = 'custom' AND model_name != '' AND status = 'connected'"
+    ).all() as { id: string; model_name: string; name: string }[]
     for (const row of customs) {
-      models.push({ id: row.model_name, label: `${row.model_name} (${row.name})`, aliases: [] })
+      models.push({ id: makeCustomModelId(row.id, row.model_name), label: row.model_name, aliases: [] })
     }
   } catch { /* DB not ready */ }
 

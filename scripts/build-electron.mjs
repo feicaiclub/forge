@@ -85,6 +85,56 @@ function copyTemplates(standaloneDir) {
   }
 }
 
+function findStandaloneAppRoot(standaloneDir) {
+  const directServer = join(standaloneDir, 'server.js')
+  if (existsSync(directServer)) return standaloneDir
+
+  const queue = [standaloneDir]
+  while (queue.length > 0) {
+    const dir = queue.shift()
+    if (!dir) continue
+
+    let entries
+    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { continue }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      if (entry.name === 'node_modules' || entry.name === '.next') continue
+      const fullPath = join(dir, entry.name)
+      if (existsSync(join(fullPath, 'server.js'))) return fullPath
+      queue.push(fullPath)
+    }
+  }
+
+  throw new Error(`Could not find standalone server.js under ${standaloneDir}`)
+}
+
+// Step 3a: Copy runtime assets into the actual standalone app root.
+function copyRuntimeAssets(standaloneDir) {
+  const appDir = findStandaloneAppRoot(standaloneDir)
+  if (!existsSync(appDir)) return
+
+  const staticSrc = join(process.cwd(), '.next', 'static')
+  const staticDest = join(appDir, '.next', 'static')
+  if (existsSync(staticSrc)) {
+    rmSync(staticDest, { recursive: true, force: true })
+    cpSync(staticSrc, staticDest, { recursive: true })
+    console.log('✅ Copied .next/static to standalone app root')
+  } else {
+    console.log('⚠️  No .next/static directory found — skipping')
+  }
+
+  const publicSrc = join(process.cwd(), 'public')
+  const publicDest = join(appDir, 'public')
+  if (existsSync(publicSrc)) {
+    rmSync(publicDest, { recursive: true, force: true })
+    cpSync(publicSrc, publicDest, { recursive: true })
+    console.log('✅ Copied public/ to standalone app root')
+  } else {
+    console.log('⚠️  No public/ directory found — skipping')
+  }
+}
+
 // Step 3b: Fix pnpm hoisting gaps in standalone node_modules.
 // pnpm uses a strict node_modules layout where dependencies are nested in .pnpm/.
 // Node.js require() can't resolve them from the top-level. Scan .pnpm/ and create
@@ -392,7 +442,12 @@ try {
   resolveSymlinks(standaloneDir)  // Second pass: resolve symlinks introduced by ensureExternalDeps
   cleanForgeData(standaloneDir)
   copyTemplates(standaloneDir)
+  copyRuntimeAssets(standaloneDir)
   stripDevPaths(standaloneDir)
+  const appDir = findStandaloneAppRoot(standaloneDir)
+  resolveSymlinks(appDir)
+  fixPnpmHoisting(appDir)
+  resolveSymlinks(appDir)
 } catch {
   console.log('⚠️  No .next/standalone found — skipping symlink resolution (dev build?)')
 }

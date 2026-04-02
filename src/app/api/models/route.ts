@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
-import { BUILTIN_MODELS, type ModelEntry } from '@/lib/models'
+import { BUILTIN_MODELS, makeCustomModelId, type ModelEntry } from '@/lib/models'
 
 /**
  * GET /api/models — Returns all available models (built-in + custom providers).
@@ -21,10 +21,11 @@ export async function GET() {
 
     for (const row of customs) {
       models.push({
-        id: row.model_name,
-        label: `${row.model_name} (${row.name})`,
+        id: makeCustomModelId(row.id, row.model_name),
+        label: row.model_name,
         provider: row.name,
         providerId: row.id,
+        apiModelId: row.model_name,
         aliases: [],
       })
     }

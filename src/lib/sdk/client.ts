@@ -20,6 +20,7 @@ import path from 'path'
 import os from 'os'
 import { getDb } from '@/lib/db'
 import { resolveProvider } from '@/lib/provider'
+import { getApiModelId, getModelEntry, parseCustomModelId } from '@/lib/models'
 import { loadWorkspaceContext, loadMemoryContext, loadRulesContext, getProjectPath } from '@/lib/workspace-fs'
 import { loadAgentsFromFiles } from './agents-loader'
 import { FORGE_BASE_SYSTEM_PROMPT, FORGE_IM_SYSTEM_PROMPT, buildEnvironmentPrompt } from './system-prompt'
@@ -277,6 +278,46 @@ function buildSystemPrompt(workspaceId: string): string {
   return systemParts.join('\n\n---\n\n')
 }
 
+function buildModelIdentityPrompt(modelId: string): string {
+  const entry = getModelEntry(modelId)
+  if (entry) {
+    return `
+# Model Identity
+
+- The current user-facing model selection is "${entry.label}".
+- If a user asks which model you are, identify yourself as "${entry.label}".
+- Do not claim to be Claude unless the selected user-facing model is actually a Claude model.
+- Internal provider routing, compatibility aliases, or SDK constraints do not change your user-facing model identity.
+`.trim()
+  }
+
+  const customModel = parseCustomModelId(modelId)
+  if (customModel) {
+    let providerName = 'Custom Provider'
+    try {
+      const db = getDb()
+      const row = db.prepare("SELECT name FROM api_providers WHERE id = ?").get(customModel.providerId) as { name?: string } | undefined
+      if (row?.name) providerName = row.name
+    } catch { /* ignore */ }
+    return `
+# Model Identity
+
+- The current user-facing model selection is "${customModel.modelName} (${providerName})".
+- If a user asks which model you are, identify yourself as "${customModel.modelName} (${providerName})".
+- Do not invent a Claude identity for this model.
+- Internal provider routing or compatibility aliases do not change your user-facing model identity.
+`.trim()
+  }
+
+  return `
+# Model Identity
+
+- The current user-facing model selection is "${modelId}".
+- If a user asks which model you are, identify yourself as "${modelId}".
+- Do not claim to be Claude unless the selected user-facing model is actually a Claude model.
+`.trim()
+}
+
 /**
  * Build system prompt for IM queries.
  * Uses compact base prompt (saves ~2500 tokens vs full) but still loads
@@ -383,7 +424,11 @@ export function createForgeQuery(opts: ForgeQueryOptions): Query {
   // IM queries use a compact base prompt but still load workspace context + memory
   // to maintain consistent personality, user info, and memory across desktop and IM
   const systemPrompt = opts.customSystemPrompt
-    || (opts.useImPrompt ? buildImSystemPrompt(opts.workspaceId) : buildSystemPrompt(opts.workspaceId))
+    || (() => {
+      const identityPrompt = buildModelIdentityPrompt(opts.model)
+      const basePrompt = opts.useImPrompt ? buildImSystemPrompt(opts.workspaceId) : buildSystemPrompt(opts.workspaceId)
+      return `${basePrompt}\n\n---\n\n${identityPrompt}`
+    })()
 
   // Load agents from .claude/agents/*.md files (skip for IM — not needed)
   const agents = opts.skipAgents ? {} : loadAgentsFromFiles(opts.workspaceId)
@@ -414,7 +459,7 @@ export function createForgeQuery(opts: ForgeQueryOptions): Query {
   // First message: set sessionId to persist the session.
   // Subsequent messages: set resume (without sessionId) to continue the conversation.
   const sdkOptions: Options = {
-    model: opts.model,
+    model: getApiModelId(opts.model) || opts.model,
     cwd: (() => { try { return getProjectPath(opts.workspaceId) } catch { return process.cwd() } })(),
     systemPrompt,
     env: sdkEnv,

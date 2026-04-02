@@ -3,7 +3,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { createServer } from 'node:net'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, watch, type FSWatcher } from 'node:fs'
+import { existsSync, readdirSync, statSync, watch, type FSWatcher } from 'node:fs'
 
 const isDev = !app.isPackaged
 
@@ -19,13 +19,32 @@ function findNodeBinary(): string {
   if (!isDev) {
     // Production: use bundled Node.js runtime (path differs by platform)
     const isWin = process.platform === 'win32'
+
+    // Use app.getAppPath() to get the correct base path
+    // In production, app.getAppPath() returns the path to app.asar
+    const appPath = app.getAppPath()
+    // Resources directory is alongside app.asar in Contents/Resources/
+    const resourcesDir = path.dirname(appPath)
+
     const bundled = isWin
-      ? path.join(process.resourcesPath, 'node-runtime', 'node.exe')
-      : path.join(process.resourcesPath, 'node-runtime', 'bin', 'node')
-    if (existsSync(bundled)) return bundled
-    console.error('[server] Bundled Node.js not found at:', bundled)
+      ? path.join(resourcesDir, 'node-runtime', 'node.exe')
+      : path.join(resourcesDir, 'node-runtime', 'bin', 'node')
+
+    if (existsSync(bundled)) {
+      // Verify the bundled node is executable by checking if it can report version
+      try {
+        const { execSync } = require('child_process')
+        execSync(`"${bundled}" --version`, { stdio: 'ignore', timeout: 5000 })
+        console.log('[server] Using bundled Node.js:', bundled)
+        return bundled
+      } catch (err) {
+        console.error('[server] Bundled Node.js not executable:', err)
+      }
+    }
+    console.log('[server] Bundled Node.js not found at:', bundled)
   }
   // Dev mode or fallback: system Node.js
+  console.log('[server] Using system Node.js')
   return 'node'
 }
 let serverProcess: ChildProcess | null = null
@@ -70,12 +89,47 @@ function waitForServer(url: string, timeoutMs = 30000): Promise<void> {
   })
 }
 
+function findStandaloneAppRoot(standaloneDir: string): string {
+  const directServer = path.join(standaloneDir, 'server.js')
+  if (existsSync(directServer)) return standaloneDir
+
+  const queue = [standaloneDir]
+  while (queue.length > 0) {
+    const dir = queue.shift()
+    if (!dir) continue
+
+    let entries: string[] = []
+    try {
+      entries = readdirSync(dir)
+    } catch {
+      continue
+    }
+
+    for (const entry of entries) {
+      if (entry === 'node_modules' || entry === '.next') continue
+      const fullPath = path.join(dir, entry)
+      if (existsSync(path.join(fullPath, 'server.js'))) return fullPath
+      try {
+        if (statSync(fullPath).isDirectory()) queue.push(fullPath)
+      } catch { /* ignore */ }
+    }
+  }
+
+  throw new Error(`Could not find standalone server.js under ${standaloneDir}`)
+}
+
 // Start Next.js standalone server in production
 async function startServer(): Promise<number> {
   const port = await getFreePort()
-  const resourcesPath = process.resourcesPath
-  const serverScript = path.join(resourcesPath, 'standalone', 'server.js')
-  const cwd = path.join(resourcesPath, 'standalone')
+
+  // Use app.getAppPath() to get the correct base path
+  // In production, app.getAppPath() returns the path to app.asar
+  const appPath = app.getAppPath()
+  // Resources directory is alongside app.asar in Contents/Resources/
+  const resourcesDir = path.dirname(appPath)
+  const standaloneDir = path.join(resourcesDir, 'standalone')
+  const cwd = findStandaloneAppRoot(standaloneDir)
+  const serverScript = path.join(cwd, 'server.js')
 
   // Use system Node.js to run the standalone server
   // This avoids needing to rebuild native modules (better-sqlite3) for Electron's ABI
@@ -110,7 +164,7 @@ async function startServer(): Promise<number> {
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
       FORGE_DATA_DIR: path.join(os.homedir(), '.forge'),
-      FORGE_RESOURCES_PATH: resourcesPath,
+      FORGE_RESOURCES_PATH: resourcesDir,
       HOME: os.homedir(),
     },
     cwd,
