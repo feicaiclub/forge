@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Local AI agent desktop app — chat, IM bridge, scheduled tasks. Powered by Claude Agent SDK.",
   "author": "FEICAI <https://github.com/feicaiclub>",
   "license": "Apache-2.0",
